@@ -86,11 +86,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           </div>
 
           {/* Main Content - Two Column Layout - Maximized */}
-          <div className="xl:grid xl:grid-cols-5 xl:min-h-[calc(100vh-120px)]">
-            {/* Left Column - Images - Takes 3/5 on desktop */}
-            <div className="xl:col-span-3 bg-gray-50 flex flex-col">
-              {/* Main Image */}
-              <div className="relative aspect-square lg:aspect-auto flex-1 min-h-[400px] md:min-h-[500px] xl:min-h-[700px]">
+          <div className="xl:grid xl:grid-cols-3 xl:min-h-[calc(100vh-120px)]">
+            {/* Left Column - Images - Takes 1/3 on desktop */}
+            <div className="xl:col-span-1 bg-gray-50 flex flex-col">
+              {/* Main Image - Smaller size */}
+              <div className="relative aspect-square flex-shrink-0">
                 {activeImage ? (
                   <img
                     src={activeImage}
@@ -129,7 +129,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               )}
             </div>
 
-            {/* Right Column - Product Info */}
+            {/* Right Column - Product Info - Takes 2/3 on desktop */}
             <div className="xl:col-span-2 p-4 md:p-6 lg:p-8 xl:p-10 overflow-y-auto xl:max-h-[calc(100vh-120px)]">
               {isEditing ? (
                 <InlineEditForm
