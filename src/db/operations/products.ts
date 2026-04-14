@@ -350,7 +350,9 @@ export async function getProductInventoryLevels(
   productId: string
 ): Promise<InventoryLevel[]> {
   console.log('[DB] Getting inventory levels for product:', productId);
-  const levels = await queryByIndex(STORES.inventory_levels, 'by_product_location', productId);
+  // Use IDBKeyRange to query compound index by first key only
+  const range = IDBKeyRange.bound([productId, ''], [productId, '\uffff']);
+  const levels = await queryByIndex(STORES.inventory_levels, 'by_product_location', range);
   console.log('[DB] Found inventory levels:', levels.length, levels);
   return levels;
 }
