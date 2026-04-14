@@ -21,6 +21,7 @@ export interface ProductDetailProps {
   onBack: () => void;
   onEdit?: (product: ProductWithInventory) => void;
   onDelete?: () => void;
+  onLocationSelect?: (locationId: string) => void;
 }
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({
@@ -28,6 +29,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   onBack,
   onEdit,
   onDelete,
+  onLocationSelect,
 }) => {
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -273,7 +275,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                     <div className="space-y-2">
                       {nonZeroInventory.map((level) => (
                         <div key={level.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm font-medium text-gray-900">{level.location_id}</span>
+                          <button
+                            onClick={() => onLocationSelect?.(level.location_id)}
+                            className="text-sm font-medium text-rose-600 hover:text-rose-700 hover:underline text-left"
+                            title="Click to view all items in this location"
+                          >
+                            {locations.find(l => l.local_id === level.location_id)?.name || level.location_id}
+                          </button>
                           <div className="text-right">
                             <span className="text-lg font-bold text-gray-900">{level.quantity_on_hand}</span>
                             <span className="text-xs text-gray-500 ml-1">on hand</span>

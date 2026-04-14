@@ -254,6 +254,10 @@ export const App: React.FC = () => {
               product={selectedProduct}
               onBack={handleBackToCatalog}
               onDelete={handleBackToCatalog}
+              onLocationSelect={(locationId) => {
+                setSelectedLocation(locationId);
+                window.location.hash = '#/';
+              }}
             />
           ) : currentView === 'scanner' ? (
             <div className="p-4 md:p-6 lg:p-8">
