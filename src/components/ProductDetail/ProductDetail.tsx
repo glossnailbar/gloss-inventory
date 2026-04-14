@@ -9,9 +9,9 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ProductWithInventory, deleteProduct } from '../../db/operations/products';
+import { ProductWithInventory, deleteProduct, updateProduct } from '../../db/operations/products';
 import { InventoryAdjustmentModal } from '../InventoryAdjustment/InventoryAdjustmentModal';
-import { EditProductModal } from './EditProductModal';
+import { InlineEditForm } from './InlineEditForm';
 
 export interface ProductDetailProps {
   product: ProductWithInventory;
@@ -27,7 +27,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   onDelete,
 }) => {
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const handleDelete = useCallback(async () => {
@@ -75,7 +75,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 {product.name}
               </h1>
               <button
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={() => setIsEditing(true)}
                 className="p-2 -mr-2 text-rose-500 hover:text-rose-600 md:hover:bg-rose-50 md:rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,6 +131,17 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
             {/* Right Column - Product Info */}
             <div className="xl:col-span-2 p-4 md:p-6 lg:p-8 xl:p-10 overflow-y-auto xl:max-h-[calc(100vh-120px)]">
+              {isEditing ? (
+                <InlineEditForm
+                  product={product}
+                  onCancel={() => setIsEditing(false)}
+                  onSave={() => {
+                    setIsEditing(false);
+                    window.location.reload();
+                  }}
+                />
+              ) : (
+                <>
               {/* Title Section */}
               <div className="mb-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h2>
@@ -279,6 +290,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   Delete
                 </button>
               </div>
+              </>
+              )}
             </div>
           </div>
         </div>
@@ -290,17 +303,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           product={product}
           onClose={() => setIsAdjustModalOpen(false)}
           onSuccess={() => setIsAdjustModalOpen(false)}
-        />
-      )}
-      {isEditModalOpen && (
-        <EditProductModal
-          product={product}
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            window.location.reload();
-          }}
         />
       )}
     </div>
