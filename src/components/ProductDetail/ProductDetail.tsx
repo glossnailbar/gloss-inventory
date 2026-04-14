@@ -259,27 +259,33 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 </Section>
               )}
 
-              {/* Inventory by Location */}
+              {/* Inventory by Location - Filter out zero quantity */}
               <Section title="Inventory by Location">
-                {product.inventory.length === 0 ? (
-                  <p className="text-sm text-gray-500">No inventory records</p>
-                ) : (
-                  <div className="space-y-2">
-                    {product.inventory.map((level) => (
-                      <div key={level.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium text-gray-900">{level.location_id}</span>
-                        <div className="text-right">
-                          <span className="text-lg font-bold text-gray-900">{level.quantity_on_hand}</span>
-                          <span className="text-xs text-gray-500 ml-1">on hand</span>
+                {(() => {
+                  const nonZeroInventory = product.inventory.filter(level => level.quantity_on_hand > 0);
+                  
+                  if (nonZeroInventory.length === 0) {
+                    return <p className="text-sm text-gray-500">No inventory records</p>;
+                  }
+                  
+                  return (
+                    <div className="space-y-2">
+                      {nonZeroInventory.map((level) => (
+                        <div key={level.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="text-sm font-medium text-gray-900">{level.location_id}</span>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-gray-900">{level.quantity_on_hand}</span>
+                            <span className="text-xs text-gray-500 ml-1">on hand</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  );
+                })()}
               </Section>
 
-              {/* Transfer Inventory */}
-              {!isEditing && product.inventory.length > 0 && (
+              {/* Transfer Inventory - Only show if there's inventory to move */}
+              {!isEditing && product.inventory.some(level => level.quantity_on_hand > 0) && (
                 <TransferInventory
                   product={product}
                   locations={locations.map(l => ({ id: l.local_id, name: l.name }))}
