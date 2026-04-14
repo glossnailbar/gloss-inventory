@@ -77,6 +77,9 @@ export interface Product extends SyncableRecord {
   brand?: string;                   // Product brand
   origin?: string;                  // Country/manufacturer origin
   tags?: string;                    // Comma-separated tags
+  item_size?: string;               // Item size (from Sortly)
+  price_per?: number;               // Price per unit (from Sortly)
+  pcs_per_box?: number;             // Pieces per box (from Sortly)
   attribute1_name?: string;        // Custom attribute 1 name
   attribute1_value?: string;        // Custom attribute 1 value
   attribute2_name?: string;        // Custom attribute 2 name

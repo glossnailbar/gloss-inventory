@@ -24,7 +24,7 @@ import { queueCreate, queueUpdate, queueDelete } from '../sync-queue';
 
 export interface CreateProductInput {
   name: string;
-  category_id: string;
+  category_id: string | null;
   organization_id: string;
   vendor_id?: string;
   sku?: string;
@@ -33,12 +33,29 @@ export interface CreateProductInput {
   unit_of_measure?: string;
   reorder_point?: number;
   reorder_quantity?: number;
+  max_level?: number;
+  unit_cost?: number;
+  purchase_link?: string;
+  brand?: string;
+  origin?: string;
+  tags?: string;
+  item_size?: string;
+  price_per?: number;
+  pcs_per_box?: number;
+  attribute1_name?: string;
+  attribute1_value?: string;
+  attribute2_name?: string;
+  attribute2_value?: string;
+  attribute3_name?: string;
+  attribute3_value?: string;
   is_retail?: boolean;
   is_backbar?: boolean;
   is_professional_only?: boolean;
   has_variants?: boolean;
   expiration_tracking?: boolean;
   image_url?: string;
+  image_url2?: string;
+  image_url3?: string;
   created_by?: string;
 }
 
@@ -67,12 +84,29 @@ export async function createProduct(
     unit_of_measure: input.unit_of_measure || 'each',
     reorder_point: input.reorder_point ?? 0,
     reorder_quantity: input.reorder_quantity ?? 0,
+    max_level: input.max_level,
+    unit_cost: input.unit_cost,
+    purchase_link: input.purchase_link,
+    brand: input.brand,
+    origin: input.origin,
+    tags: input.tags,
+    item_size: input.item_size,
+    price_per: input.price_per,
+    pcs_per_box: input.pcs_per_box,
+    attribute1_name: input.attribute1_name,
+    attribute1_value: input.attribute1_value,
+    attribute2_name: input.attribute2_name,
+    attribute2_value: input.attribute2_value,
+    attribute3_name: input.attribute3_name,
+    attribute3_value: input.attribute3_value,
     is_retail: input.is_retail ?? true,
     is_backbar: input.is_backbar ?? false,
     is_professional_only: input.is_professional_only ?? false,
     has_variants: input.has_variants ?? false,
     expiration_tracking: input.expiration_tracking ?? false,
     image_url: input.image_url,
+    image_url2: input.image_url2,
+    image_url3: input.image_url3,
     created_at: now,
     updated_at: now,
     created_by: input.created_by,
