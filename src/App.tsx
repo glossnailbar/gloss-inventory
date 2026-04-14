@@ -16,7 +16,7 @@ import { AddProductModal } from './components/AddProductModal/AddProductModal';
 import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { LocationManager } from './components/Locations/LocationManager';
-import { FixLocations } from './components/Locations/FixLocations';
+import { CreateLocations } from './components/Locations/CreateLocations';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
@@ -427,7 +427,7 @@ export const App: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Fix Sortly Locations</h2>
+              <h2 className="text-xl font-bold">Create Sortly Locations</h2>
               <button 
                 onClick={() => setShowFixLocations(false)}
                 className="p-2 text-gray-500 hover:text-gray-700"
@@ -437,7 +437,7 @@ export const App: React.FC = () => {
                 </svg>
               </button>
             </div>
-            <FixLocations />
+            <CreateLocations />
           </div>
         </div>
       )}
