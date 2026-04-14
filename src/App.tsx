@@ -94,9 +94,6 @@ export const App: React.FC = () => {
       // Set selected location from URL if present
       if (locationId) {
         setSelectedLocation(locationId);
-      } else if (view !== 'catalog') {
-        // Only clear location if not on catalog view
-        // (keep location if just changing views within catalog)
       }
       
       if (view === 'item' && itemId) {
@@ -164,13 +161,14 @@ export const App: React.FC = () => {
   }, []);
 
   const handleBackToCatalog = useCallback(() => {
+    setSelectedLocation(null);
     window.location.hash = '#/';
-  }, []);
+  }, [setSelectedLocation]);
 
   const handleViewAll = useCallback(() => {
     setSelectedLocation(null);
     window.location.hash = '#/';
-  }, []);
+  }, [setSelectedLocation]);
 
   const handleLocationSelect = useCallback((locationId: string) => {
     window.location.hash = `#/location/${locationId}`;
@@ -256,7 +254,14 @@ export const App: React.FC = () => {
         <div className={`${isItemPage ? 'hidden md:block' : ''}`}>
           <Sidebar
             selectedLocation={selectedLocation}
-            onSelectLocation={setSelectedLocation}
+            onSelectLocation={(locationId) => {
+              if (locationId) {
+                window.location.hash = `#/location/${locationId}`;
+              } else {
+                window.location.hash = '#/';
+              }
+              setIsSidebarOpen(false);
+            }}
             onViewAll={handleViewAll}
             onManageLocations={() => setIsLocationManagerOpen(true)}
             isOpen={isSidebarOpen}
