@@ -299,9 +299,102 @@ export const App: React.FC = () => {
       <ImportSortlyModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImport={async (products, categories, vendors) => {
-          // ... import logic
-          window.location.reload();
+        onImport={async (products, categories, vendors, locations) => {
+          console.log('Importing', products.length, 'products,', categories.length, 'categories,', vendors.length, 'vendors,', locations.length, 'locations');
+          
+          try {
+            // Create categories
+            const { createCategory } = await import('./db/operations/categories');
+            const categoryMap = new Map<string, string>();
+            
+            for (const cat of categories) {
+              try {
+                const newCat = await createCategory({
+                  name: cat.name,
+                  organization_id: DEMO_ORG_ID,
+                });
+                categoryMap.set(cat.name, newCat.local_id);
+              } catch (err) {
+                console.error('Failed to create category:', cat.name, err);
+              }
+            }
+            
+            // Create vendors
+            const { createVendor } = await import('./db/operations/vendors');
+            const vendorMap = new Map<string, string>();
+            
+            for (const vendor of vendors) {
+              try {
+                const newVendor = await createVendor({
+                  name: vendor.name,
+                  organization_id: DEMO_ORG_ID,
+                });
+                vendorMap.set(vendor.name, newVendor.local_id);
+              } catch (err) {
+                console.error('Failed to create vendor:', vendor.name, err);
+              }
+            }
+            
+            // Create products with location info
+            const { createProduct } = await import('./db/operations/products');
+            
+            let importedCount = 0;
+            
+            for (const product of products) {
+              try {
+                const categoryId = categoryMap.get(product.folder) || null;
+                const vendorId = product.vendor ? vendorMap.get(product.vendor) : undefined;
+                
+                // Use Sortly location or default
+                const locationId = product.location || 'default';
+                
+                console.log('Creating product:', product.name, 'qty:', product.quantity, 'location:', locationId);
+                
+                await createProduct({
+                  name: product.name,
+                  organization_id: DEMO_ORG_ID,
+                  category_id: categoryId,
+                  vendor_id: vendorId,
+                  description: product.description,
+                  sku: product.sku,
+                  barcode: product.barcode,
+                  unit_of_measure: product.unit_of_measure || 'piece',
+                  reorder_point: product.reorder_point || 0,
+                  reorder_quantity: product.max_level || 0,
+                  max_level: product.max_level,
+                  unit_cost: product.unit_cost,
+                  purchase_link: product.purchase_link,
+                  brand: product.brand,
+                  origin: product.origin,
+                  tags: product.tags,
+                  item_size: product.item_size,
+                  price_per: product.price_per,
+                  pcs_per_box: product.pcs_per_box,
+                  attribute1_name: product.attribute1_name,
+                  attribute1_value: product.attribute1_value,
+                  attribute2_name: product.attribute2_name,
+                  attribute2_value: product.attribute2_value,
+                  attribute3_name: product.attribute3_name,
+                  attribute3_value: product.attribute3_value,
+                  image_url: product.image_url,
+                  image_url2: product.image_url2,
+                  image_url3: product.image_url3,
+                }, product.quantity > 0 ? [{ location_id: locationId, quantity: product.quantity }] : undefined);
+                
+                importedCount++;
+              } catch (err) {
+                console.error('Failed to import product:', product.name, err);
+              }
+            }
+            
+            console.log(`Successfully imported ${importedCount} products`);
+            window.location.reload();
+            
+          } catch (err) {
+            console.error('Import failed:', err);
+          }
+          
+          setIsImportModalOpen(false);
         }}
       />
     </div>

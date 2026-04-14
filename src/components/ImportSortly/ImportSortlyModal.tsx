@@ -20,6 +20,7 @@ interface ImportProduct {
   purchase_link: string | null;
   description: string | null;
   folder: string;
+  location: string | null;
   vendor: string | null;
   brand: string | null;
   origin: string | null;
@@ -54,7 +55,7 @@ interface ImportVendor {
 interface ImportSortlyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (products: ImportProduct[], categories: ImportCategory[], vendors: ImportVendor[]) => void;
+  onImport: (products: ImportProduct[], categories: ImportCategory[], vendors: ImportVendor[], locations: string[]) => void;
 }
 
 export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
@@ -69,6 +70,7 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
     products: ImportProduct[]; 
     categories: ImportCategory[];
     vendors: ImportVendor[];
+    locations: string[];
   } | null>(null);
   const [step, setStep] = useState<'upload' | 'preview' | 'confirm'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,10 +131,12 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
     products: ImportProduct[]; 
     categories: ImportCategory[];
     vendors: ImportVendor[];
+    locations: string[];
   } => {
     // Extract unique folder names for categories
     const folderSet = new Set<string>();
     const vendorSet = new Set<string>();
+    const locationSet = new Set<string>();
     
     data.forEach((row) => {
       const folder = row['Primary Folder'] || row['Subfolder-level1'] || 'Uncategorized';
@@ -143,6 +147,12 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       const vendor = row['Vendor'];
       if (vendor && typeof vendor === 'string' && vendor.trim()) {
         vendorSet.add(vendor.trim());
+      }
+      
+      // Extract location - Sortly has "Location" column
+      const location = row['Location'];
+      if (location && typeof location === 'string' && location.trim()) {
+        locationSet.add(location.trim());
       }
     });
     
@@ -162,6 +172,9 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
     const products: ImportProduct[] = data.map((row, index) => {
       const folder = row['Primary Folder'] || row['Subfolder-level1'] || 'Uncategorized';
       const vendorName = row['Vendor'];
+      
+      // Parse location from Sortly
+      const locationName = row['Location'];
       
       // Parse quantity - handle both number and string
       const rawQty = row['Quantity'];
@@ -228,16 +241,17 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
         attribute2_value: row['Attribute 2 Option'] || null,
         attribute3_name: row['Attribute 3 Name'] || null,
         attribute3_value: row['Attribute 3 Option'] || null,
+        location: locationName && typeof locationName === 'string' ? locationName.trim() : null,
       };
     });
     
-    return { products, categories, vendors };
+    return { products, categories, vendors, locations: Array.from(locationSet) };
   };
 
   const handleImport = () => {
     if (!parsedData) return;
     
-    onImport(parsedData.products, parsedData.categories, parsedData.vendors);
+    onImport(parsedData.products, parsedData.categories, parsedData.vendors, parsedData.locations);
     onClose();
   };
 
