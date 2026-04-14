@@ -10,17 +10,35 @@ import * as XLSX from 'xlsx';
 interface ImportProduct {
   local_id: string;
   name: string;
+  item_group: string | null;
   sku: string | null;
   barcode: string | null;
   quantity: number;
   unit_cost: number | null;
+  value: number | null;
+  ordered: number;
   purchase_link: string | null;
   description: string | null;
   folder: string;
   vendor: string | null;
+  brand: string | null;
+  origin: string | null;
+  tags: string | null;
+  item_size: string | null;
+  price_per: number | null;
+  pcs_per_box: number | null;
+  max_level: number | null;
   unit_of_measure: string;
   reorder_point: number;
   image_url: string | null;
+  image_url2: string | null;
+  image_url3: string | null;
+  attribute1_name: string | null;
+  attribute1_value: string | null;
+  attribute2_name: string | null;
+  attribute2_value: string | null;
+  attribute3_name: string | null;
+  attribute3_value: string | null;
 }
 
 interface ImportCategory {
@@ -144,7 +162,6 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
     const products: ImportProduct[] = data.map((row, index) => {
       const folder = row['Primary Folder'] || row['Subfolder-level1'] || 'Uncategorized';
       const vendorName = row['Vendor'];
-      const photoUrl = row['Photo1'] || row['Photo2'] || row['Photo3'] || null;
       
       // Parse quantity - handle both number and string
       const rawQty = row['Quantity'];
@@ -156,26 +173,61 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       const unitCost = typeof rawPrice === 'number' ? rawPrice : 
                        typeof rawPrice === 'string' ? parseFloat(rawPrice) || null : null;
       
-      console.log(`Row ${index}: name="${row['Entry Name']}", rawQty=${rawQty}, parsedQty=${quantity}`);
+      // Calculate value (Qty × Price)
+      const value = unitCost ? quantity * unitCost : null;
+      
+      // Parse other numeric fields
+      const ordered = typeof row['Ordered'] === 'number' ? row['Ordered'] : 
+                      parseFloat(row['Ordered']) || 0;
+      const maxLevel = typeof row['Max Level'] === 'number' ? row['Max Level'] : 
+                       parseFloat(row['Max Level']) || null;
+      const pricePer = typeof row['Price Per'] === 'number' ? row['Price Per'] : 
+                       parseFloat(row['Price Per']) || null;
+      const pcsPerBox = typeof row['Pcs per Box'] === 'number' ? row['Pcs per Box'] : 
+                        parseFloat(row['Pcs per Box']) || null;
+      
+      // Parse photos
+      const photo1 = row['Photo1'];
+      const photo2 = row['Photo2'];
+      const photo3 = row['Photo3'];
+      
+      // Parse purchase link
+      const purchaseLink = row['Purchase Link'];
       
       return {
         local_id: `sortly-${Date.now()}-${index}`,
         name: row['Entry Name'] || `Item ${index + 1}`,
+        item_group: row['Item Group Name'] || null,
         sku: row['SID'] || null,
         barcode: row['Barcode/QR1-Data'] || null,
         quantity: quantity,
         unit_cost: unitCost,
-        purchase_link: row['Purchase Link'] && typeof row['Purchase Link'] === 'string' && row['Purchase Link'].startsWith('http')
-          ? row['Purchase Link'] 
+        value: value,
+        ordered: ordered,
+        purchase_link: purchaseLink && typeof purchaseLink === 'string' && purchaseLink.startsWith('http')
+          ? purchaseLink 
           : null,
         description: row['Notes'] || null,
         folder: folder,
         vendor: vendorName && typeof vendorName === 'string' ? vendorName.trim() : null,
+        brand: row['Brand'] || null,
+        origin: row['Origin'] || null,
+        tags: row['Tags'] || null,
+        item_size: row['Item Size'] || null,
+        price_per: pricePer,
+        pcs_per_box: pcsPerBox,
+        max_level: maxLevel,
         unit_of_measure: row['Unit'] || 'piece',
         reorder_point: parseFloat(row['Min Level']) || 0,
-        image_url: photoUrl && typeof photoUrl === 'string' && photoUrl.startsWith('http') 
-          ? photoUrl 
-          : null,
+        image_url: photo1 && typeof photo1 === 'string' && photo1.startsWith('http') ? photo1 : null,
+        image_url2: photo2 && typeof photo2 === 'string' && photo2.startsWith('http') ? photo2 : null,
+        image_url3: photo3 && typeof photo3 === 'string' && photo3.startsWith('http') ? photo3 : null,
+        attribute1_name: row['Attribute 1 Name'] || null,
+        attribute1_value: row['Attribute 1 Option'] || null,
+        attribute2_name: row['Attribute 2 Name'] || null,
+        attribute2_value: row['Attribute 2 Option'] || null,
+        attribute3_name: row['Attribute 3 Name'] || null,
+        attribute3_value: row['Attribute 3 Option'] || null,
       };
     });
     

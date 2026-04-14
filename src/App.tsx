@@ -354,8 +354,11 @@ export const App: React.FC = () => {
                   barcode: product.barcode,
                   unit_of_measure: product.unit_of_measure || 'piece',
                   reorder_point: product.reorder_point || 0,
+                  reorder_quantity: product.max_level || 0,
                   unit_cost: product.unit_cost || undefined,
                   purchase_link: product.purchase_link || undefined,
+                  brand: product.brand || undefined,
+                  origin: product.origin || undefined,
                   image_url: product.image_url || undefined,
                 }, product.quantity > 0 ? [{ location_id: 'default', quantity: product.quantity }] : undefined);
                 
