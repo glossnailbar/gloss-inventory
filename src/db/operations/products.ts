@@ -84,6 +84,7 @@ export async function createProduct(
 
   // Create initial inventory levels if provided
   if (locationQuantities?.length) {
+    console.log('[DB] Creating inventory levels for product:', localId, locationQuantities);
     for (const { location_id, quantity } of locationQuantities) {
       const level: InventoryLevel = {
         id: generateLocalId(),
@@ -95,7 +96,10 @@ export async function createProduct(
         updated_at: now,
       };
       await putToStore(STORES.inventory_levels, level);
+      console.log('[DB] Created inventory level:', level);
     }
+  } else {
+    console.log('[DB] No inventory levels to create for product:', localId);
   }
 
   // Queue for sync
@@ -345,7 +349,10 @@ export async function getInventoryLevel(
 export async function getProductInventoryLevels(
   productId: string
 ): Promise<InventoryLevel[]> {
-  return queryByIndex(STORES.inventory_levels, 'by_product_location', productId);
+  console.log('[DB] Getting inventory levels for product:', productId);
+  const levels = await queryByIndex(STORES.inventory_levels, 'by_product_location', productId);
+  console.log('[DB] Found inventory levels:', levels.length, levels);
+  return levels;
 }
 
 /**
