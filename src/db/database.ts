@@ -1,6 +1,6 @@
 /**
  * Gloss Inventory - IndexedDB Database Manager
- * 
+ *
  * Handles database initialization, connection management, and schema upgrades.
  * Uses Dexie.js pattern but with vanilla IndexedDB for zero dependencies.
  */
@@ -36,15 +36,15 @@ export function generateLocalId(): string {
 export function getDeviceId(): string {
   const storageKey = 'gloss-device-id';
   let deviceId = localStorage.getItem(storageKey);
-  
+
   if (!deviceId) {
     // Generate new device ID with device type hint
-    const deviceType = /iPad|Tablet/i.test(navigator.userAgent) ? 'tablet' : 
+    const deviceType = /iPad|Tablet/i.test(navigator.userAgent) ? 'tablet' :
                        /Mobile/i.test(navigator.userAgent) ? 'phone' : 'desktop';
     deviceId = `${deviceType}-${generateLocalId().split('-')[0]}`;
     localStorage.setItem(storageKey, deviceId);
   }
-  
+
   return deviceId;
 }
 
@@ -70,13 +70,13 @@ export async function initDatabase(): Promise<IDBDatabase> {
       Object.values(STORES).forEach((storeName) => {
         if (!db.objectStoreNames.contains(storeName)) {
           // Primary key: 'id' for most, 'local_id' for syncable records
-          const keyPath = storeName === 'sync_state' ? 'id' : 
+          const keyPath = storeName === 'sync_state' ? 'id' :
                           storeName === 'organizations' ? 'id' :
                           storeName === 'inventory_levels' ? 'id' :
                           storeName === 'cost_layers' ? 'id' :
                           storeName === 'purchase_order_items' ? 'id' :
                           'local_id';
-          
+
           const store = db.createObjectStore(storeName, { keyPath });
 
           // Add indexes
@@ -117,7 +117,7 @@ export function closeDatabase(): void {
  */
 export async function clearAllData(): Promise<void> {
   const db = await getDatabase();
-  
+
   const stores = Object.values(STORES);
   const promises = stores.map((storeName) => {
     return new Promise<void>((resolve, reject) => {
@@ -156,7 +156,7 @@ export async function getFromStore<T extends StoreRecord>(
   key: string
 ): Promise<T | undefined> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly');
     const store = transaction.objectStore(storeName);
@@ -174,7 +174,7 @@ export async function getAllFromStore<T extends StoreRecord>(
   storeName: StoreName
 ): Promise<T[]> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly');
     const store = transaction.objectStore(storeName);
@@ -194,7 +194,7 @@ export async function queryByIndex<T extends StoreRecord>(
   value: IDBValidKey | IDBKeyRange
 ): Promise<T[]> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly');
     const store = transaction.objectStore(storeName);
@@ -214,7 +214,7 @@ export async function putToStore<T extends StoreRecord>(
   record: T
 ): Promise<void> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readwrite');
     const store = transaction.objectStore(storeName);
@@ -233,7 +233,7 @@ export async function deleteFromStore(
   key: string
 ): Promise<void> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readwrite');
     const store = transaction.objectStore(storeName);
@@ -253,11 +253,11 @@ export async function countStore(
   value?: IDBValidKey | IDBKeyRange
 ): Promise<number> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readonly');
     const store = transaction.objectStore(storeName);
-    
+
     let request: IDBRequest;
     if (indexName && value !== undefined) {
       const index = store.index(indexName);
@@ -278,7 +278,7 @@ export async function countStore(
  */
 export async function getSyncState(): Promise<SyncState> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction('sync_state', 'readonly');
     const store = transaction.objectStore('sync_state');
@@ -316,8 +316,8 @@ export async function updateSyncState(updates: Partial<SyncState>): Promise<void
  */
 export async function incrementPendingCount(delta: number = 1): Promise<void> {
   const state = await getSyncState();
-  await updateSyncState({ 
-    pending_count: Math.max(0, state.pending_count + delta) 
+  await updateSyncState({
+    pending_count: Math.max(0, state.pending_count + delta)
   });
 }
 
@@ -331,7 +331,7 @@ export async function bulkPut<T extends StoreRecord>(
   records: T[]
 ): Promise<void> {
   const db = await getDatabase();
-  
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, 'readwrite');
     const store = transaction.objectStore(storeName);
@@ -353,37 +353,27 @@ export async function* iterateStore<T extends StoreRecord>(
   indexName?: string
 ): AsyncGenerator<T, void, unknown> {
   const db = await getDatabase();
-  
+
   const transaction = db.transaction(storeName, 'readonly');
   const store = transaction.objectStore(storeName);
   const source = indexName ? store.index(indexName) : store;
-  
-  const request = source.openCursor();
 
-  const promise = new Promise<void>((resolve, reject) => {
-    request.onsuccess = () => {
-      const cursor = request.result;
-      if (cursor) {
-        // Yield will be handled by generator
-        request.onerror = () => reject(request.error!);
-        request.onsuccess = () => {
-          const c = request.result;
-          if (c) {
-            (async () => {
-              yield c.value as T;
-              c.continue();
-            })();
-          } else {
-            resolve();
-          }
-        };
-        cursor.continue();
-      } else {
-        resolve();
-      }
-    };
-    request.onerror = () => reject(request.error);
-  });
+  const cursorRequest = source.openCursor();
 
-  await promise;
+  while (true) {
+    const cursor = await new Promise<IDBCursorWithValue | null>((resolve, reject) => {
+      cursorRequest.onsuccess = () => resolve(cursorRequest.result);
+      cursorRequest.onerror = () => reject(cursorRequest.error);
+    });
+
+    if (!cursor) break;
+
+    yield cursor.value as T;
+
+    await new Promise<void>((resolve, reject) => {
+      const continueRequest = cursor.continue();
+      continueRequest.onsuccess = () => resolve();
+      continueRequest.onerror = () => reject(continueRequest.error);
+    });
+  }
 }
