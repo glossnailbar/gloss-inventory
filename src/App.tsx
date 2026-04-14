@@ -141,7 +141,7 @@ export const App: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-rose-200 border-t-rose-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Initializing Gloss Inventory...u003c/p>
+          <p className="text-gray-600">Initializing Gloss Inventory...</p>
         </div>
       </div>
     );

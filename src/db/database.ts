@@ -137,13 +137,13 @@ export async function clearAllData(): Promise<void> {
  */
 export async function exportDatabase(): Promise<Record<string, unknown[]>> {
   const db = await getDatabase();
-  const export: Record<string, unknown[]> = {};
+  const dataExport: Record<string, unknown[]> = {};
 
   for (const storeName of Object.values(STORES)) {
-    export[storeName] = await getAllFromStore(storeName);
+    dataExport[storeName] = await getAllFromStore(storeName);
   }
 
-  return export;
+  return dataExport;
 }
 
 // ============ GENERIC CRUD OPERATIONS ============
