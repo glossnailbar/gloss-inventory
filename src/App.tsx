@@ -292,34 +292,22 @@ export const App: React.FC = () => {
           
           try {
             const { createProduct } = await import('./db/operations/products');
-            const { queueForSync } = await import('./db/sync-queue');
             
             let importedCount = 0;
             
             for (const product of products) {
               try {
-                // Create product in IndexedDB
-                const newProduct = await createProduct(DEMO_ORG_ID, {
+                // Create product in IndexedDB - pass object with organization_id
+                await createProduct({
                   name: product.name,
+                  organization_id: DEMO_ORG_ID,
+                  category_id: 'uncategorized', // Use a default category ID
                   description: product.description,
                   sku: product.sku,
                   barcode: product.barcode,
                   unit_of_measure: product.unit_of_measure || 'piece',
-                  cost_method: product.cost_method || 'fifo',
                   reorder_point: product.reorder_point || 0,
-                  category_id: null,
-                });
-                
-                // Set initial quantity
-                if (product.quantity > 0) {
-                  const { adjustInventory } = await import('./db/operations/products');
-                  await adjustInventory(
-                    newProduct.local_id,
-                    product.quantity,
-                    'initial',
-                    'Sortly import'
-                  );
-                }
+                }, product.quantity > 0 ? [{ location_id: 'default', quantity: product.quantity }] : undefined);
                 
                 importedCount++;
               } catch (err) {
@@ -329,16 +317,8 @@ export const App: React.FC = () => {
             
             console.log(`Successfully imported ${importedCount} products`);
             
-            // Update sync status
-            setSyncStatus(prev => ({
-              ...prev,
-              pendingCount: prev.pendingCount + importedCount,
-            }));
-            
-            // Trigger sync if online
-            if (navigator.onLine && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
-              navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' });
-            }
+            // Force refresh the product list
+            window.location.reload();
             
           } catch (err) {
             console.error('Import failed:', err);
