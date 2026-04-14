@@ -212,6 +212,7 @@ export const App: React.FC = () => {
             onProductSelect={handleProductSelect}
             onScanBarcode={handleScanBarcode}
             onAddProduct={handleAddProduct}
+            onImport={() => setIsImportModalOpen(true)}
           />
         )}
 

@@ -22,6 +22,7 @@ export interface ProductCatalogProps {
   onProductSelect?: (product: ProductWithInventory) => void;
   onScanBarcode?: () => void;
   onAddProduct?: () => void;
+  onImport?: () => void;
 }
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
@@ -29,6 +30,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   onProductSelect,
   onScanBarcode,
   onAddProduct,
+  onImport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -112,22 +114,38 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       {/* Sticky Header - Full width on mobile, contained on desktop */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto w-full">
-        {/* Search Bar */}
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search products, SKUs, or scan barcode..."
-          onScanPress={onScanBarcode}
-          className="px-4 py-3"
-        />
+          {/* Header with Import button */}
+          <div className="flex items-center gap-2 px-4 py-2">
+            <div className="flex-1">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search products, SKUs, or scan barcode..."
+                onScanPress={onScanBarcode}
+                className="py-2"
+              />
+            </div>
+            {onImport && (
+              <button
+                onClick={onImport}
+                className="flex-shrink-0 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                title="Import from Sortly"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import
+              </button>
+            )}
+          </div>
 
-        {/* Category Filter Chips */}
-        <CategoryFilter
-          organizationId={organizationId}
-          selectedId={selectedCategory}
-          onSelect={setSelectedCategory}
-          className="px-4 pb-3"
-        />
+          {/* Category Filter Chips */}
+          <CategoryFilter
+            organizationId={organizationId}
+            selectedId={selectedCategory}
+            onSelect={setSelectedCategory}
+            className="px-4 pb-3"
+          />
         </div>
       </div>
 
