@@ -251,7 +251,61 @@ export const App: React.FC = () => {
         onImport={async (products) => {
           // Import products to IndexedDB
           console.log('Importing', products.length, 'products');
-          // TODO: Add to IndexedDB and sync queue
+          
+          try {
+            const { createProduct } = await import('./db/operations/products');
+            const { queueForSync } = await import('./db/sync-queue');
+            
+            let importedCount = 0;
+            
+            for (const product of products) {
+              try {
+                // Create product in IndexedDB
+                const newProduct = await createProduct(DEMO_ORG_ID, {
+                  name: product.name,
+                  description: product.description,
+                  sku: product.sku,
+                  barcode: product.barcode,
+                  unit_of_measure: product.unit_of_measure || 'piece',
+                  cost_method: product.cost_method || 'fifo',
+                  reorder_point: product.reorder_point || 0,
+                  category_id: null,
+                });
+                
+                // Set initial quantity
+                if (product.quantity > 0) {
+                  const { adjustInventory } = await import('./db/operations/products');
+                  await adjustInventory(
+                    newProduct.local_id,
+                    product.quantity,
+                    'initial',
+                    'Sortly import'
+                  );
+                }
+                
+                importedCount++;
+              } catch (err) {
+                console.error('Failed to import product:', product.name, err);
+              }
+            }
+            
+            console.log(`Successfully imported ${importedCount} products`);
+            
+            // Update sync status
+            setSyncStatus(prev => ({
+              ...prev,
+              pendingCount: prev.pendingCount + importedCount,
+            }));
+            
+            // Trigger sync if online
+            if (navigator.onLine && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' });
+            }
+            
+          } catch (err) {
+            console.error('Import failed:', err);
+          }
+          
           setIsImportModalOpen(false);
         }}
       />
