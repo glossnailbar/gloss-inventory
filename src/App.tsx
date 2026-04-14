@@ -16,7 +16,6 @@ import { AddProductModal } from './components/AddProductModal/AddProductModal';
 import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { LocationManager } from './components/Locations/LocationManager';
-import { CreateLocations } from './components/Locations/CreateLocations';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
@@ -56,7 +55,6 @@ export const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
-  const [showFixLocations, setShowFixLocations] = useState(false);
 
   // Initialize database on mount
   useEffect(() => {
@@ -273,21 +271,13 @@ export const App: React.FC = () => {
             /* Catalog View */
             <div className="p-4 md:p-6 lg:p-8">
               {/* Page Title */}
-              <div className="mb-6 flex items-start justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {selectedLocation ? 'Location Items' : 'All Items'}
-                  </h1>
-                  <p className="text-gray-500">
-                    {selectedLocation ? `Viewing items in ${selectedLocation}` : 'Viewing all inventory items'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowFixLocations(true)}
-                  className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200"
-                >
-                  🔧 Fix Sortly Locations
-                </button>
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {selectedLocation ? 'Location Items' : 'All Items'}
+                </h1>
+                <p className="text-gray-500">
+                  {selectedLocation ? `Viewing items in ${selectedLocation}` : 'Viewing all inventory items'}
+                </p>
               </div>
 
               <ProductCatalog
@@ -421,26 +411,6 @@ export const App: React.FC = () => {
           window.location.reload();
         }}
       />
-
-      {/* Fix Locations Tool */}
-      {showFixLocations && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Create Sortly Locations</h2>
-              <button 
-                onClick={() => setShowFixLocations(false)}
-                className="p-2 text-gray-500 hover:text-gray-700"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <CreateLocations />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
