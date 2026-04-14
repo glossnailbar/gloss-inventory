@@ -146,13 +146,25 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       const vendorName = row['Vendor'];
       const photoUrl = row['Photo1'] || row['Photo2'] || row['Photo3'] || null;
       
+      // Parse quantity - handle both number and string
+      const rawQty = row['Quantity'];
+      const quantity = typeof rawQty === 'number' ? rawQty : 
+                       typeof rawQty === 'string' ? parseFloat(rawQty) || 0 : 0;
+      
+      // Parse price
+      const rawPrice = row['Price'];
+      const unitCost = typeof rawPrice === 'number' ? rawPrice : 
+                       typeof rawPrice === 'string' ? parseFloat(rawPrice) || null : null;
+      
+      console.log(`Row ${index}: name="${row['Entry Name']}", rawQty=${rawQty}, parsedQty=${quantity}`);
+      
       return {
         local_id: `sortly-${Date.now()}-${index}`,
         name: row['Entry Name'] || `Item ${index + 1}`,
         sku: row['SID'] || null,
         barcode: row['Barcode/QR1-Data'] || null,
-        quantity: parseFloat(row['Quantity']) || 0,
-        unit_cost: row['Price'] ? parseFloat(row['Price']) : null,
+        quantity: quantity,
+        unit_cost: unitCost,
         purchase_link: row['Purchase Link'] && typeof row['Purchase Link'] === 'string' && row['Purchase Link'].startsWith('http')
           ? row['Purchase Link'] 
           : null,
