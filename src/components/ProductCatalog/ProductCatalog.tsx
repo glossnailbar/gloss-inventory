@@ -135,9 +135,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
       {/* Product Grid */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto w-full p-3"
-          <LoadingState />
-        ) : filteredProducts.length === 0 ? (
+        <div className="max-w-7xl mx-auto w-full p-3">
+          {isLoading ? (
+            <LoadingState />
+          ) : filteredProducts.length === 0 ? (
           <EmptyState 
             hasSearch={!!searchQuery} 
             onAddProduct={onAddProduct}
