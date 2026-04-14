@@ -10,11 +10,25 @@ import { ProductCatalog } from './components/ProductCatalog/ProductCatalog';
 import { ProductDetail } from './components/ProductDetail/ProductDetail';
 import { BarcodeScanner } from './components/BarcodeScanner/BarcodeScanner';
 import { AddProductModal } from './components/AddProductModal/AddProductModal';
+import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { ProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, updateSyncState } from './db/database';
 
 type View = 'catalog' | 'detail' | 'scanner' | 'add-product';
+
+interface ImportProduct {
+  local_id: string;
+  name: string;
+  sku: string | null;
+  barcode: string | null;
+  quantity: number;
+  description: string | null;
+  location: string;
+  unit_of_measure: string;
+  cost_method: string;
+  reorder_point: number;
+}
 
 // Demo organization ID for testing
 const DEMO_ORG_ID = 'demo-gloss-heights';
@@ -22,6 +36,7 @@ const DEMO_ORG_ID = 'demo-gloss-heights';
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<ProductWithInventory | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncStatus, setSyncStatus] = useState<{
     pendingCount: number;
@@ -227,6 +242,18 @@ export const App: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Import Sortly Modal */}
+      <ImportSortlyModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={async (products) => {
+          // Import products to IndexedDB
+          console.log('Importing', products.length, 'products');
+          // TODO: Add to IndexedDB and sync queue
+          setIsImportModalOpen(false);
+        }}
+      />
     </div>
   );
 };
