@@ -15,6 +15,7 @@ import { BarcodeScanner } from './components/BarcodeScanner/BarcodeScanner';
 import { AddProductModal } from './components/AddProductModal/AddProductModal';
 import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
+import { LocationManager } from './components/Locations/LocationManager';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
   }>({ pendingCount: 0, lastSync: null, isSyncing: false });
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
 
   // Initialize database on mount
   useEffect(() => {
@@ -238,6 +240,7 @@ export const App: React.FC = () => {
             selectedLocation={selectedLocation}
             onSelectLocation={setSelectedLocation}
             onViewAll={handleViewAll}
+            onManageLocations={() => setIsLocationManagerOpen(true)}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
           />
@@ -395,6 +398,17 @@ export const App: React.FC = () => {
           }
           
           setIsImportModalOpen(false);
+        }}
+      />
+
+      {/* Location Manager Modal */}
+      <LocationManager
+        organizationId={DEMO_ORG_ID}
+        isOpen={isLocationManagerOpen}
+        onClose={() => setIsLocationManagerOpen(false)}
+        onLocationsUpdated={() => {
+          // Trigger a refresh - the sidebar will reload locations
+          window.location.reload();
         }}
       />
     </div>
