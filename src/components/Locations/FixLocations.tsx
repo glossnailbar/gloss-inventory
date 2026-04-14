@@ -9,9 +9,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { getAllFromStore, putToStore, deleteFromStore } from '../db/database';
-import { STORES, Location, InventoryLevel } from '../db/schema';
-import { generateLocalId } from '../db/database';
+import { getAllFromStore, putToStore, deleteFromStore, generateLocalId } from '../../db/database';
+import { STORES, Location, InventoryLevel } from '../../db/schema';
 
 interface FixResult {
   locationsCreated: string[];
