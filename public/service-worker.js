@@ -1,6 +1,9 @@
 const CACHE_NAME = 'gloss-inventory-v1';
 const SYNC_TAG = 'gloss-inventory-sync';
 
+// API URL - change this to your Railway URL
+const API_URL = 'https://gloss-inventory.up.railway.app';
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -32,33 +35,13 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
 
+  // Don't cache API calls - let them go to network
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request));
-  } else {
-    event.respondWith(cacheFirst(request));
+    return;
   }
-});
 
-async function networkFirst(request) {
-  try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  } catch (error) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    if (request.url.includes('/api/')) {
-      return new Response(
-        JSON.stringify({ error: 'offline' }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-    throw error;
-  }
-}
+  event.respondWith(cacheFirst(request));
+});
 
 async function cacheFirst(request) {
   const cached = await caches.match(request);
@@ -69,6 +52,7 @@ async function cacheFirst(request) {
   return fetch(request);
 }
 
+// Background sync
 self.addEventListener('sync', (event) => {
   if (event.tag === SYNC_TAG) {
     event.waitUntil(processSyncQueue());
@@ -78,34 +62,46 @@ self.addEventListener('sync', (event) => {
 async function processSyncQueue() {
   const db = await openDB('GlossInventory', 1);
   if (!db) return;
-  
-  const tx = db.transaction('sync_queue', 'readonly');
-  const store = tx.objectStore('sync_queue');
-  const index = store.index('by_status');
-  const pending = await index.getAll('pending');
-  
-  if (pending.length === 0) return;
-  
+
   try {
-    const response = await fetch('/api/sync/push', {
+    const tx = db.transaction('sync_queue', 'readonly');
+    const store = tx.objectStore('sync_queue');
+    const index = store.index('by_status');
+    const pending = await index.getAll('pending');
+
+    if (pending.length === 0) return;
+
+    // Get device ID
+    const deviceId = await getDeviceId();
+
+    // Push to Railway API
+    const response = await fetch(`${API_URL}/api/sync/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ changes: pending })
+      body: JSON.stringify({
+        device_id: deviceId,
+        organization_id: 'demo-gloss-heights',
+        changes: pending
+      })
     });
-    
+
     if (!response.ok) throw new Error('Sync failed');
-    
+
     const result = await response.json();
-    
+
+    // Remove synced items from queue
     const writeTx = db.transaction('sync_queue', 'readwrite');
     const writeStore = writeTx.objectStore('sync_queue');
-    
+
     for (const accepted of result.accepted || []) {
       writeStore.delete(accepted.local_id);
     }
-    
+
+    // Notify clients
     await notifyClients({ type: 'sync-complete', processed: result.accepted?.length || 0 });
+
   } catch (err) {
+    console.error('[SW] Sync error:', err);
     await notifyClients({ type: 'sync-error', error: err.message });
   }
 }
@@ -117,6 +113,20 @@ function openDB(name, version) {
     req.onerror = () => reject(req.error);
     req.onblocked = () => resolve(null);
   });
+}
+
+async function getDeviceId() {
+  // Generate or retrieve device ID
+  const clients = await self.clients.matchAll({ type: 'window' });
+  if (clients.length > 0) {
+    return new Promise((resolve) => {
+      const channel = new BroadcastChannel('gloss-device-id');
+      channel.postMessage({ action: 'get' });
+      channel.onmessage = (event) => resolve(event.data.device_id);
+      setTimeout(() => resolve('unknown-device'), 1000);
+    });
+  }
+  return 'unknown-device';
 }
 
 async function notifyClients(data) {
