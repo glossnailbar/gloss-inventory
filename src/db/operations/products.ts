@@ -8,6 +8,7 @@ import {
   type Product,
   type ProductVariant,
   type InventoryLevel,
+  type Vendor,
   STORES,
 } from '../schema';
 import {
@@ -464,6 +465,7 @@ export interface ProductWithInventory extends Product {
   inventory: InventoryLevel[];
   total_quantity: number;
   variants?: ProductVariant[];
+  vendor_name?: string;
 }
 
 /**
@@ -480,10 +482,22 @@ export async function getProductWithInventory(
 
   const total_quantity = inventory.reduce((sum, level) => sum + level.quantity_on_hand, 0);
 
+  // Fetch vendor name if vendor_id exists
+  let vendor_name: string | undefined;
+  if (product.vendor_id) {
+    try {
+      const vendor = await getFromStore<Vendor>(STORES.vendors, product.vendor_id);
+      vendor_name = vendor?.name;
+    } catch (e) {
+      console.log('[DB] Could not fetch vendor:', e);
+    }
+  }
+
   return {
     ...product,
     inventory,
     total_quantity,
     variants: variants.length > 0 ? variants : undefined,
+    vendor_name,
   };
 }
