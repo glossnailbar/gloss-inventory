@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { ProductWithInventory } from '../../db/operations/products';
-import { getAllFromStore, putToStore } from '../../db/database';
+import { getAllFromStore, putToStore, deleteFromStore } from '../../db/database';
 import { STORES, InventoryLevel } from '../../db/schema';
 import { generateLocalId } from '../../db/database';
 
@@ -50,13 +50,19 @@ export const TransferInventory: React.FC<TransferInventoryProps> = ({
         return;
       }
 
-      // Update from location (decrease)
-      await putToStore(STORES.inventory_levels, {
-        ...fromLevel,
-        quantity_on_hand: fromLevel.quantity_on_hand - parseInt(quantity),
-        updated_at: new Date().toISOString(),
-        sync_status: 'pending',
-      });
+      // Update from location (decrease) - delete if reaches 0
+      const newFromQuantity = fromLevel.quantity_on_hand - parseInt(quantity);
+      if (newFromQuantity <= 0) {
+        // Delete the inventory level record if it reaches 0
+        await deleteFromStore(STORES.inventory_levels, fromLevel.id);
+      } else {
+        await putToStore(STORES.inventory_levels, {
+          ...fromLevel,
+          quantity_on_hand: newFromQuantity,
+          updated_at: new Date().toISOString(),
+          sync_status: 'pending',
+        });
+      }
 
       // Find or create to location
       let toLevel = productLevels.find(l => l.location_id === toLocation);
