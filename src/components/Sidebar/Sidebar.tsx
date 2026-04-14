@@ -1,15 +1,15 @@
 /**
- * Sidebar - Navigation sidebar with locations
+ * Sidebar - Navigation sidebar with actual locations from inventory
  * 
  * Features:
  * - View All Items link
- * - Location-based navigation (like Sortly)
+ * - Location-based navigation from actual inventory data
  * - Collapsible on mobile
  */
 
 import React, { useState, useEffect } from 'react';
 import { getAllFromStore } from '../../db/database';
-import { STORES, Location } from '../../db/schema';
+import { STORES, InventoryLevel } from '../../db/schema';
 
 export interface SidebarProps {
   selectedLocation: string | null;
@@ -19,6 +19,24 @@ export interface SidebarProps {
   onClose: () => void;
 }
 
+interface LocationInfo {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+// Map common location IDs to icons
+const getLocationIcon = (name: string): string => {
+  const lower = name.toLowerCase();
+  if (lower.includes('front') || lower.includes('desk') || lower.includes('reception')) return '🏢';
+  if (lower.includes('back') || lower.includes('bar')) return '💅';
+  if (lower.includes('storage') || lower.includes('warehouse')) return '📦';
+  if (lower.includes('office')) return '🏢';
+  if (lower.includes('supply') || lower.includes('supplies')) return '📋';
+  if (lower.includes('retail') || lower.includes('shop')) return '🛍️';
+  return '📍';
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({
   selectedLocation,
   onSelectLocation,
@@ -26,30 +44,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [locations, setLocations] = useState<LocationInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadLocations = async () => {
+    const loadLocationsFromInventory = async () => {
       try {
-        const locs = await getAllFromStore<Location>(STORES.locations);
-        setLocations(locs.filter(l => l.is_active));
+        // Get all inventory levels and extract unique location IDs
+        const levels = await getAllFromStore<InventoryLevel>(STORES.inventory_levels);
+        const uniqueLocationIds = [...new Set(levels.map(l => l.location_id))];
+        
+        // Create location info from IDs
+        // Try to get human-readable names from locations store first
+        const locationInfos: LocationInfo[] = [];
+        
+        for (const id of uniqueLocationIds) {
+          // Default: use ID as name (capitalize first letter)
+          let name = id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, ' ');
+          
+          // Check if there's a Location record
+          try {
+            const { STORES } = await import('../../db/schema');
+            const { getFromStore } = await import('../../db/database');
+            const location = await getFromStore<{ name: string }>(STORES.locations, id);
+            if (location?.name) {
+              name = location.name;
+            }
+          } catch (e) {
+            // No location record, use ID-based name
+          }
+          
+          locationInfos.push({
+            id,
+            name,
+            icon: getLocationIcon(name),
+          });
+        }
+        
+        // Sort alphabetically
+        locationInfos.sort((a, b) => a.name.localeCompare(b.name));
+        
+        setLocations(locationInfos);
       } catch (err) {
         console.error('Failed to load locations:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadLocations();
+
+    loadLocationsFromInventory();
+    
+    // Refresh locations when storage changes
+    const handleStorage = () => loadLocationsFromInventory();
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
-
-  // Default locations if none exist
-  const defaultLocations = [
-    { id: 'default', name: 'Front Desk', icon: '🏢' },
-    { id: 'backbar', name: 'Back Bar', icon: '💅' },
-    { id: 'storage', name: 'Storage', icon: '📦' },
-  ];
-
-  const displayLocations = locations.length > 0 
-    ? locations.map(l => ({ id: l.local_id, name: l.name, icon: '📍' }))
-    : defaultLocations;
 
   return (
     <>
@@ -108,23 +157,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Location Links */}
-          {displayLocations.map((location) => (
-            <button
-              key={location.id}
-              onClick={() => {
-                onSelectLocation(location.id);
-                onClose();
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                selectedLocation === location.id
-                  ? 'bg-rose-100 text-rose-700'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className="text-lg">{location.icon}</span>
-              <span>{location.name}</span>
-            </button>
-          ))}
+          {isLoading ? (
+            <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+          ) : locations.length === 0 ? (
+            <div className="px-4 py-2 text-sm text-gray-500">No locations found</div>
+          ) : (
+            locations.map((location) => (
+              <button
+                key={location.id}
+                onClick={() => {
+                  onSelectLocation(location.id);
+                  onClose();
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  selectedLocation === location.id
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="text-lg">{location.icon}</span>
+                <span className="truncate">{location.name}</span>
+              </button>
+            ))
+          )}
         </nav>
 
         {/* Footer */}
