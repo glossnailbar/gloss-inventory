@@ -11,7 +11,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { ProductCard } from './ProductCard';
-import { SearchBar } from './SearchBar';
+import { SortlyHeader } from './SortlyHeader';
 import { CategoryFilter } from './CategoryFilter';
 import { BottomSheet } from '../shared/BottomSheet';
 import { useProducts } from '../../hooks/useProducts';
@@ -111,52 +111,31 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Sticky Header - Full width on mobile, contained on desktop */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto w-full">
-          {/* Header with Import button */}
-          <div className="flex items-center gap-2 px-4 py-2">
-            <div className="flex-1">
-              <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search products, SKUs, or scan barcode..."
-                onScanPress={onScanBarcode}
-                className="py-2"
-              />
-            </div>
-            {onImport && (
-              <button
-                onClick={onImport}
-                className="flex-shrink-0 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                title="Import from Sortly"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                Import
-              </button>
-            )}
-          </div>
-
-          {/* Category Filter Chips */}
+      {/* Sortly-style Header */}
+      <div className="sticky top-0 z-20">
+        <SortlyHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onScanPress={onScanBarcode}
+          onImport={onImport}
+          onAddPress={onAddProduct}
+          itemCount={filteredProducts.length}
+        />
+        
+        {/* Category Filter - Horizontal scrollable */}
+        <div className="bg-white border-b border-gray-100">
           <CategoryFilter
             organizationId={organizationId}
             selectedId={selectedCategory}
             onSelect={setSelectedCategory}
-            className="px-4 pb-3"
+            className="px-4 py-2"
           />
         </div>
       </div>
 
-      {/* Product Grid - Centered container for desktop */}
+      {/* Product Grid */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto w-full p-4"
-        onScroll={(e) => {
-          // TODO: Implement infinite scroll
-        }}
-      >
-        {isLoading ? (
+        <div className="max-w-7xl mx-auto w-full p-3"
           <LoadingState />
         ) : filteredProducts.length === 0 ? (
           <EmptyState 
@@ -164,25 +143,24 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             onAddProduct={onAddProduct}
           />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8 pb-24">
             {Object.entries(groupedProducts).map(([categoryId, categoryProducts]) => (
               <section key={categoryId} className="space-y-3">
                 {/* Category Header */}
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 px-1">
                   {categoryProducts[0]?.category_name || 'Uncategorized'}
-                  <span className="ml-2 text-gray-400 font-normal">
+                  <span className="text-gray-400 font-normal">
                     ({categoryProducts.length})
                   </span>
                 </h2>
 
-                {/* Product Grid - Mobile: 2 columns, Tablet: 3, Desktop: 4 */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {/* Product Grid - Mobile: 2 columns, Tablet: 3, Desktop: 4, Large: 5 */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {categoryProducts.map((product) => (
                     <ProductCard
                       key={product.local_id}
                       product={product}
                       onClick={() => handleProductClick(product)}
-                      showStockWarning={product.total_quantity <= product.reorder_point}
                     />
                   ))}
                 </div>
@@ -228,9 +206,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 // Sub-components
 
 const LoadingState: React.FC = () => (
-  <div className="flex flex-col items-center justify-center py-12 space-y-4">
-    <div className="w-12 h-12 border-4 border-rose-200 border-t-rose-500 rounded-full animate-spin" />
-    <p className="text-gray-500">Loading products...</p>
+  <div className="flex flex-col items-center justify-center py-20">
+    <div className="w-10 h-10 border-3 border-rose-200 border-t-rose-500 rounded-full animate-spin mb-4" />
+    <p className="text-gray-500">Loading items...</p>
   </div>
 );
 
@@ -240,27 +218,28 @@ interface EmptyStateProps {
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({ hasSearch, onAddProduct }) => (
-  <div className="flex flex-col items-center justify-center py-12 text-center">
+  <div className="flex flex-col items-center justify-center py-20 text-center px-4">
     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
       <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
     </div>
     <h3 className="text-lg font-medium text-gray-900 mb-1">
-      {hasSearch ? 'No products found' : 'No products yet'}
+      {hasSearch ? 'No items found' : 'No items yet'}
     </h3>
-    <p className="text-gray-500 mb-4">
+    <p className="text-gray-500 mb-6 max-w-xs">
       {hasSearch 
-        ? 'Try adjusting your search or filters'
-        : 'Add your first product to get started'
+        ? 'Try adjusting your search terms'
+        : 'Get started by adding your first item or importing from Sortly'
       }
     </p>
-    {!hasSearch && (
+    
+    {!hasSearch && onAddProduct && (
       <button
         onClick={onAddProduct}
-        className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
+        className="px-6 py-3 bg-rose-500 text-white rounded-full font-medium hover:bg-rose-600 transition-colors shadow-sm"
       >
-        Add Product
+        Add First Item
       </button>
     )}
   </div>
