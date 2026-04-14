@@ -59,11 +59,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Desktop Container - Maximized */}
-      <div className="max-w-7xl mx-auto py-4 lg:py-6">
-        {/* Card */}
-        <div className="bg-white md:rounded-2xl md:shadow-lg overflow-hidden">
-          {/* Header */}
+      {/* Desktop Container - Full page */}
+      <div className="min-h-screen">
+        {/* Card - No rounded corners, full bleed */}
+        <div className="bg-white min-h-screen">
+          {/* Header - Fixed */}
           <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
             <div className="flex items-center justify-between px-4 py-3 md:px-6 lg:px-8">
               <button
@@ -88,8 +88,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
           </div>
 
-          {/* Main Content - Two Column Layout - Maximized */}
-          <div className="xl:grid xl:grid-cols-3 xl:min-h-[calc(100vh-120px)]">
+          {/* Main Content - Full height, no max-height restrictions */}
+          <div className="xl:grid xl:grid-cols-3">
             {/* Left Column - Images - Takes 1/3 on desktop */}
             <div className="xl:col-span-1 bg-gray-50 flex flex-col">
               {/* Main Image - Smaller size */}
@@ -133,7 +133,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
 
             {/* Right Column - Product Info - Takes 2/3 on desktop */}
-            <div className="xl:col-span-2 p-4 md:p-6 lg:p-8 xl:p-10 overflow-y-auto xl:max-h-[calc(100vh-120px)]">
+            <div className="xl:col-span-2 p-4 md:p-6 lg:p-8 xl:p-10">
               {isEditing ? (
                 <InlineEditForm
                   product={product}
