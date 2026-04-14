@@ -7,6 +7,7 @@
 import React, { useState, useCallback } from 'react';
 import { ProductWithInventory, deleteProduct } from '../../db/operations/products';
 import { InventoryAdjustmentModal } from '../InventoryAdjustment/InventoryAdjustmentModal';
+import { EditProductModal } from './EditProductModal';
 
 export interface ProductDetailProps {
   product: ProductWithInventory;
@@ -22,6 +23,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   onDelete,
 }) => {
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'inventory' | 'history'>('overview');
 
   const handleDelete = useCallback(async () => {
@@ -50,7 +52,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               </button>
               <h1 className="font-semibold text-gray-900 truncate flex-1 text-center md:text-lg">Product Details</h1>
               <button
-                onClick={() => onEdit?.(product)}
+                onClick={() => setIsEditModalOpen(true)}
                 className="p-2 -mr-2 text-rose-500 hover:text-rose-600 md:hover:bg-rose-50 md:rounded-lg"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,6 +189,18 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           onClose={() => setIsAdjustModalOpen(false)}
           onSuccess={() => {
             setIsAdjustModalOpen(false);
+          }}
+        />
+      )}
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <EditProductModal
+          product={product}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={() => {
+            setIsEditModalOpen(false);
+            window.location.reload();
           }}
         />
       )}

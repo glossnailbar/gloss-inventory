@@ -71,14 +71,26 @@ export interface Product extends SyncableRecord {
   unit_of_measure: string;        // 'bottle', 'pack', 'each', 'ml'
   reorder_point: number;
   reorder_quantity: number;
-  unit_cost?: number;             // Average cost per unit
-  purchase_link?: string;         // URL to purchase
+  max_level?: number;               // Max stock level
+  unit_cost?: number;               // Average cost per unit
+  purchase_link?: string;           // URL to purchase
+  brand?: string;                   // Product brand
+  origin?: string;                  // Country/manufacturer origin
+  tags?: string;                    // Comma-separated tags
+  attribute1_name?: string;        // Custom attribute 1 name
+  attribute1_value?: string;        // Custom attribute 1 value
+  attribute2_name?: string;        // Custom attribute 2 name
+  attribute2_value?: string;        // Custom attribute 2 value
+  attribute3_name?: string;        // Custom attribute 3 name
+  attribute3_value?: string;        // Custom attribute 3 value
   is_retail: boolean;
   is_backbar: boolean;
   is_professional_only: boolean;
   has_variants: boolean;
   expiration_tracking: boolean;
   image_url?: string;
+  image_url2?: string;
+  image_url3?: string;
   created_by?: string;
   updated_by?: string;
 }
