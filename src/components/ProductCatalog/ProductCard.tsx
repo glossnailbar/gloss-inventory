@@ -59,15 +59,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.name}
         </h3>
         
-        <p className="text-sm text-gray-500">
-          {product.total_quantity === 0 ? (
-            <span className="text-red-600 font-medium">Out of stock</span>
-          ) : product.total_quantity <= product.reorder_point ? (
-            <span className="text-amber-600 font-medium">{product.total_quantity} left</span>
-          ) : (
-            <span>{product.total_quantity} in stock</span>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            {product.total_quantity === 0 ? (
+              <span className="text-red-600 font-medium">Out of stock</span>
+            ) : product.total_quantity <= product.reorder_point ? (
+              <span className="text-amber-600 font-medium">{product.total_quantity} left</span>
+            ) : (
+              <span>{product.total_quantity} in stock</span>
+            )}
+          </p>
+          
+          {product.unit_cost && (
+            <p className="text-sm font-medium text-gray-900">
+              ${product.unit_cost.toFixed(2)}
+            </p>
           )}
-        </p>
+        </div>
       </div>
     </button>
   );

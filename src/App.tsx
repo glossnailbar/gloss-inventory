@@ -296,13 +296,13 @@ export const App: React.FC = () => {
       <ImportSortlyModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImport={async (products, categories) => {
-          console.log('Importing', products.length, 'products into', categories.length, 'categories');
+        onImport={async (products, categories, vendors) => {
+          console.log('Importing', products.length, 'products,', categories.length, 'categories,', vendors.length, 'vendors');
           
           try {
-            // First create categories
+            // Create categories
             const { createCategory } = await import('./db/operations/categories');
-            const categoryMap = new Map<string, string>(); // folder name -> local_id
+            const categoryMap = new Map<string, string>();
             
             for (const cat of categories) {
               try {
@@ -311,31 +311,50 @@ export const App: React.FC = () => {
                   organization_id: DEMO_ORG_ID,
                 });
                 categoryMap.set(cat.name, newCat.local_id);
-                console.log('Created category:', cat.name, '->', newCat.local_id);
               } catch (err) {
                 console.error('Failed to create category:', cat.name, err);
               }
             }
             
-            // Then create products with their category_ids
+            // Create vendors
+            const { createVendor } = await import('./db/operations/vendors');
+            const vendorMap = new Map<string, string>();
+            
+            for (const vendor of vendors) {
+              try {
+                const newVendor = await createVendor({
+                  name: vendor.name,
+                  organization_id: DEMO_ORG_ID,
+                });
+                vendorMap.set(vendor.name, newVendor.local_id);
+              } catch (err) {
+                console.error('Failed to create vendor:', vendor.name, err);
+              }
+            }
+            
+            // Create products with all fields
             const { createProduct } = await import('./db/operations/products');
             
             let importedCount = 0;
             
             for (const product of products) {
               try {
-                // Get category_id from map, or null if not found
                 const categoryId = categoryMap.get(product.folder) || null;
+                const vendorId = product.vendor ? vendorMap.get(product.vendor) : undefined;
                 
                 await createProduct({
                   name: product.name,
                   organization_id: DEMO_ORG_ID,
                   category_id: categoryId,
+                  vendor_id: vendorId,
                   description: product.description,
                   sku: product.sku,
                   barcode: product.barcode,
                   unit_of_measure: product.unit_of_measure || 'piece',
                   reorder_point: product.reorder_point || 0,
+                  unit_cost: product.unit_cost || undefined,
+                  purchase_link: product.purchase_link || undefined,
+                  image_url: product.image_url || undefined,
                 }, product.quantity > 0 ? [{ location_id: 'default', quantity: product.quantity }] : undefined);
                 
                 importedCount++;
@@ -344,9 +363,7 @@ export const App: React.FC = () => {
               }
             }
             
-            console.log(`Successfully imported ${importedCount} products into ${categories.length} categories`);
-            
-            // Reload to show imported items
+            console.log(`Successfully imported ${importedCount} products`);
             window.location.reload();
             
           } catch (err) {

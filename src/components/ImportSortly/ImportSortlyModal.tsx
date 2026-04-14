@@ -1,10 +1,7 @@
 /**
- * ImportSortlyModal - Import Sortly Excel backup with category creation
+ * ImportSortlyModal - Import Sortly Excel backup with full data capture
  * 
- * Features:
- * - Drag-and-drop Excel import
- * - Auto-extract Sortly folders as categories
- * - Create categories on import
+ * Captures: name, quantity, price, vendor, purchase link, photos, folders as categories
  */
 
 import React, { useState, useCallback, useRef } from 'react';
@@ -16,10 +13,14 @@ interface ImportProduct {
   sku: string | null;
   barcode: string | null;
   quantity: number;
+  unit_cost: number | null;
+  purchase_link: string | null;
   description: string | null;
   folder: string;
+  vendor: string | null;
   unit_of_measure: string;
   reorder_point: number;
+  image_url: string | null;
 }
 
 interface ImportCategory {
@@ -27,10 +28,15 @@ interface ImportCategory {
   local_id: string;
 }
 
+interface ImportVendor {
+  name: string;
+  local_id: string;
+}
+
 interface ImportSortlyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (products: ImportProduct[], categories: ImportCategory[]) => void;
+  onImport: (products: ImportProduct[], categories: ImportCategory[], vendors: ImportVendor[]) => void;
 }
 
 export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
@@ -41,7 +47,11 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[] | null>(null);
-  const [parsedData, setParsedData] = useState<{ products: ImportProduct[]; categories: ImportCategory[] } | null>(null);
+  const [parsedData, setParsedData] = useState<{ 
+    products: ImportProduct[]; 
+    categories: ImportCategory[];
+    vendors: ImportVendor[];
+  } | null>(null);
   const [step, setStep] = useState<'upload' | 'preview' | 'confirm'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,9 +96,9 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
         
         setPreview(jsonData);
         
-        // Parse products and extract categories from folders
-        const { products, categories } = parseSortlyData(jsonData);
-        setParsedData({ products, categories });
+        // Parse products, categories, and vendors
+        const { products, categories, vendors } = parseSortlyData(jsonData);
+        setParsedData({ products, categories, vendors });
         
         setStep('preview');
       }
@@ -97,15 +107,24 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
     reader.readAsBinaryString(file);
   };
 
-  const parseSortlyData = (data: any[]): { products: ImportProduct[]; categories: ImportCategory[] } => {
-    // Extract unique folder names
+  const parseSortlyData = (data: any[]): { 
+    products: ImportProduct[]; 
+    categories: ImportCategory[];
+    vendors: ImportVendor[];
+  } => {
+    // Extract unique folder names for categories
     const folderSet = new Set<string>();
+    const vendorSet = new Set<string>();
     
     data.forEach((row) => {
-      // Check Primary Folder first, then Subfolder levels
-      const folder = row['Primary Folder'] || row['Subfolder-level1'] || row['Folder'] || 'Uncategorized';
+      const folder = row['Primary Folder'] || row['Subfolder-level1'] || 'Uncategorized';
       if (folder && folder !== 'Uncategorized') {
         folderSet.add(folder);
+      }
+      
+      const vendor = row['Vendor'];
+      if (vendor && typeof vendor === 'string' && vendor.trim()) {
+        vendorSet.add(vendor.trim());
       }
     });
     
@@ -115,34 +134,46 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       local_id: `cat-${Date.now()}-${index}`,
     }));
     
-    // Create a lookup map for category local_ids
-    const categoryMap = new Map<string, string>();
-    categories.forEach(cat => categoryMap.set(cat.name, cat.local_id));
+    // Create vendor objects
+    const vendors: ImportVendor[] = Array.from(vendorSet).map((name, index) => ({
+      name,
+      local_id: `vendor-${Date.now()}-${index}`,
+    }));
     
-    // Parse products
+    // Parse products with all fields
     const products: ImportProduct[] = data.map((row, index) => {
-      const folder = row['Primary Folder'] || row['Subfolder-level1'] || row['Folder'] || 'Uncategorized';
+      const folder = row['Primary Folder'] || row['Subfolder-level1'] || 'Uncategorized';
+      const vendorName = row['Vendor'];
+      const photoUrl = row['Photo1'] || row['Photo2'] || row['Photo3'] || null;
       
       return {
         local_id: `sortly-${Date.now()}-${index}`,
-        name: row['Entry Name'] || row['Name'] || `Item ${index + 1}`,
-        sku: row['SID'] || row['SKU'] || null,
-        barcode: row['Barcode/QR1-Data'] || row['Barcode'] || null,
-        quantity: parseFloat(row['Quantity'] || row['Qty'] || '0') || 0,
-        description: row['Notes'] || row['Description'] || null,
+        name: row['Entry Name'] || `Item ${index + 1}`,
+        sku: row['SID'] || null,
+        barcode: row['Barcode/QR1-Data'] || null,
+        quantity: parseFloat(row['Quantity']) || 0,
+        unit_cost: row['Price'] ? parseFloat(row['Price']) : null,
+        purchase_link: row['Purchase Link'] && typeof row['Purchase Link'] === 'string' && row['Purchase Link'].startsWith('http')
+          ? row['Purchase Link'] 
+          : null,
+        description: row['Notes'] || null,
         folder: folder,
+        vendor: vendorName && typeof vendorName === 'string' ? vendorName.trim() : null,
         unit_of_measure: row['Unit'] || 'piece',
-        reorder_point: parseFloat(row['Min Level'] || '0') || 0,
+        reorder_point: parseFloat(row['Min Level']) || 0,
+        image_url: photoUrl && typeof photoUrl === 'string' && photoUrl.startsWith('http') 
+          ? photoUrl 
+          : null,
       };
     });
     
-    return { products, categories };
+    return { products, categories, vendors };
   };
 
   const handleImport = () => {
     if (!parsedData) return;
     
-    onImport(parsedData.products, parsedData.categories);
+    onImport(parsedData.products, parsedData.categories, parsedData.vendors);
     onClose();
   };
 
@@ -154,7 +185,7 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Import from Sortly</h2>
-          <p className="text-sm text-gray-500">Import your Sortly backup with folders as categories</p>
+          <p className="text-sm text-gray-500">Import with quantity, price, vendor, photos, and folders</p>
         </div>
 
         {/* Content */}
@@ -192,48 +223,42 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
               {/* Summary */}
               <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
                 <p className="text-sm text-rose-800">
-                  <strong>{parsedData.products.length} items</strong> will be imported into{' '}
-                  <strong>{parsedData.categories.length} categories</strong> (from Sortly folders)
+                  <strong>{parsedData.products.length} items</strong> with quantity, price, vendor, and photos
+                </p>
+                <p className="text-sm text-rose-700 mt-1">
+                  {parsedData.categories.length} categories · {parsedData.vendors.length} vendors
                 </p>
               </div>
               
-              {/* Categories Preview */}
-              {parsedData.categories.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Categories to Create:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {parsedData.categories.map((cat) => (
-                      <span key={cat.local_id} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                        {cat.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Products Preview */}
+              {/* Sample Items Preview */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Sample Items:</h3>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2 text-left font-medium text-gray-700">Name</th>
-                        <th className="px-4 py-2 text-left font-medium text-gray-700">Category</th>
-                        <th className="px-4 py-2 text-right font-medium text-gray-700">Qty</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Name</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Category</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-700">Qty</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-700">Price</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Vendor</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {parsedData.products.slice(0, 5).map((product) => (
                         <tr key={product.local_id}>
-                          <td className="px-4 py-2 text-gray-900">{product.name}</td>
-                          <td className="px-4 py-2 text-gray-500">{product.folder}</td>
-                          <td className="px-4 py-2 text-right text-gray-900">{product.quantity}</td>
+                          <td className="px-3 py-2 text-gray-900 truncate max-w-[150px]">{product.name}</td>
+                          <td className="px-3 py-2 text-gray-500">{product.folder}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">{product.quantity}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">
+                            {product.unit_cost ? `$${product.unit_cost.toFixed(2)}` : '-'}
+                          </td>
+                          <td className="px-3 py-2 text-gray-500 truncate max-w-[100px]">{product.vendor || '-'}</td>
                         </tr>
                       ))}
                       {parsedData.products.length > 5 && (
                         <tr>
-                          <td colSpan={3} className="px-4 py-2 text-center text-gray-500 italic">
+                          <td colSpan={5} className="px-3 py-2 text-center text-gray-500 italic">
                             ...and {parsedData.products.length - 5} more items
                           </td>
                         </tr>

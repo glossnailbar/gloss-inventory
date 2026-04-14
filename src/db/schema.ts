@@ -62,7 +62,7 @@ export interface Vendor extends SyncableRecord {
 
 export interface Product extends SyncableRecord {
   organization_id: string;
-  category_id: string;
+  category_id: string | null;
   vendor_id?: string;
   name: string;
   sku?: string;
@@ -71,6 +71,8 @@ export interface Product extends SyncableRecord {
   unit_of_measure: string;        // 'bottle', 'pack', 'each', 'ml'
   reorder_point: number;
   reorder_quantity: number;
+  unit_cost?: number;             // Average cost per unit
+  purchase_link?: string;         // URL to purchase
   is_retail: boolean;
   is_backbar: boolean;
   is_professional_only: boolean;
