@@ -61,7 +61,10 @@ self.addEventListener('sync', (event) => {
 
 async function processSyncQueue() {
   const db = await openDB('GlossInventory', 1);
-  if (!db) return;
+  if (!db) {
+    console.error('[SW] Could not open IndexedDB');
+    return;
+  }
 
   try {
     const tx = db.transaction('sync_queue', 'readonly');
@@ -69,10 +72,30 @@ async function processSyncQueue() {
     const index = store.index('by_status');
     const pending = await index.getAll('pending');
 
-    if (pending.length === 0) return;
+    console.log('[SW] Found', pending.length, 'pending items to sync');
+
+    if (pending.length === 0) {
+      console.log('[SW] No pending items, skipping sync');
+      return;
+    }
+
+    // Notify clients that sync started
+    await notifyClients({ type: 'sync-started', count: pending.length });
 
     // Get device ID
-    const deviceId = await getDeviceId();
+    const deviceId = 'web-' + Math.random().toString(36).slice(2, 11);
+    console.log('[SW] Using device ID:', deviceId);
+
+    // Prepare changes
+    const changes = pending.map(item => ({
+      local_id: item.local_id,
+      table_name: item.table_name,
+      operation: item.operation,
+      data: item.data,
+      timestamp: item.created_at
+    }));
+
+    console.log('[SW] Sending', changes.length, 'changes to', API_URL);
 
     // Push to Railway API
     const response = await fetch(`${API_URL}/api/sync/push`, {
@@ -81,24 +104,41 @@ async function processSyncQueue() {
       body: JSON.stringify({
         device_id: deviceId,
         organization_id: 'demo-gloss-heights',
-        changes: pending
+        changes: changes
       })
     });
 
-    if (!response.ok) throw new Error('Sync failed');
+    console.log('[SW] Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[SW] Sync failed:', response.status, errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
 
     const result = await response.json();
+    console.log('[SW] Sync result:', result);
 
     // Remove synced items from queue
     const writeTx = db.transaction('sync_queue', 'readwrite');
     const writeStore = writeTx.objectStore('sync_queue');
 
+    let deletedCount = 0;
     for (const accepted of result.accepted || []) {
-      writeStore.delete(accepted.local_id);
+      await new Promise((resolve, reject) => {
+        const deleteReq = writeStore.delete(accepted.local_id);
+        deleteReq.onsuccess = () => {
+          deletedCount++;
+          resolve();
+        };
+        deleteReq.onerror = () => reject(deleteReq.error);
+      });
     }
 
+    console.log('[SW] Deleted', deletedCount, 'synced items from queue');
+
     // Notify clients
-    await notifyClients({ type: 'sync-complete', processed: result.accepted?.length || 0 });
+    await notifyClients({ type: 'sync-complete', processed: result.accepted?.length || 0, total: pending.length });
 
   } catch (err) {
     console.error('[SW] Sync error:', err);
