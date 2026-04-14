@@ -342,6 +342,8 @@ export const App: React.FC = () => {
                 const categoryId = categoryMap.get(product.folder) || null;
                 const vendorId = product.vendor ? vendorMap.get(product.vendor) : undefined;
                 
+                console.log('Creating product:', product.name, 'qty:', product.quantity, 'type:', typeof product.quantity);
+                
                 await createProduct({
                   name: product.name,
                   organization_id: DEMO_ORG_ID,
