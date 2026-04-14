@@ -72,11 +72,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           className="
-            flex-1 py-3 pr-2
+            flex-1 py-2 md:py-1.5 pr-2
             bg-transparent
             text-gray-900 placeholder-gray-400
             outline-none
-            text-base
+            text-base md:text-sm
           "
         />
 
