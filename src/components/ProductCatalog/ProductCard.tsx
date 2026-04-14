@@ -29,7 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition-all duration-200 active:scale-[0.98] text-left"
     >
       {/* Photo - Square aspect ratio */}
-      <div className="relative aspect-square bg-gray-100">
+      <div className="relative aspect-[4/3] bg-gray-100">
         {product.image_url ? (
           <img
             src={product.image_url}

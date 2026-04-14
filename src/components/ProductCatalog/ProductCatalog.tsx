@@ -17,6 +17,7 @@ import { ProductWithInventory } from '../../db/operations/products';
 
 export interface ProductCatalogProps {
   organizationId: string;
+  selectedLocation?: string | null;
   onProductSelect?: (product: ProductWithInventory) => void;
   onScanBarcode?: () => void;
   onAddProduct?: () => void;
@@ -26,6 +27,7 @@ export interface ProductCatalogProps {
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   organizationId,
+  selectedLocation,
   onProductSelect,
   onScanBarcode,
   onAddProduct,
@@ -37,9 +39,16 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   const { products, isLoading, refresh } = useProducts(organizationId);
 
-  // Filter products based on search and category
+  // Filter products based on search, category, and location
   const filteredProducts = useMemo(() => {
     let filtered = products;
+
+    // Location filter
+    if (selectedLocation) {
+      filtered = filtered.filter((p) => 
+        p.inventory.some(inv => inv.location_id === selectedLocation)
+      );
+    }
 
     // Category filter
     if (selectedCategory) {
@@ -58,7 +67,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     }
 
     return filtered;
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, selectedLocation, searchQuery]);
 
   // Group products by category for display
   const groupedProducts = useMemo(() => {
