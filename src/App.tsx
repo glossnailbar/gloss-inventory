@@ -286,22 +286,41 @@ export const App: React.FC = () => {
       <ImportSortlyModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImport={async (products) => {
-          // Import products to IndexedDB
-          console.log('Importing', products.length, 'products');
+        onImport={async (products, categories) => {
+          console.log('Importing', products.length, 'products into', categories.length, 'categories');
           
           try {
+            // First create categories
+            const { createCategory } = await import('./db/operations/categories');
+            const categoryMap = new Map<string, string>(); // folder name -> local_id
+            
+            for (const cat of categories) {
+              try {
+                const newCat = await createCategory({
+                  name: cat.name,
+                  organization_id: DEMO_ORG_ID,
+                });
+                categoryMap.set(cat.name, newCat.local_id);
+                console.log('Created category:', cat.name, '->', newCat.local_id);
+              } catch (err) {
+                console.error('Failed to create category:', cat.name, err);
+              }
+            }
+            
+            // Then create products with their category_ids
             const { createProduct } = await import('./db/operations/products');
             
             let importedCount = 0;
             
             for (const product of products) {
               try {
-                // Create product in IndexedDB - pass object with organization_id
+                // Get category_id from map, or null if not found
+                const categoryId = categoryMap.get(product.folder) || null;
+                
                 await createProduct({
                   name: product.name,
                   organization_id: DEMO_ORG_ID,
-                  category_id: 'uncategorized', // Use a default category ID
+                  category_id: categoryId,
                   description: product.description,
                   sku: product.sku,
                   barcode: product.barcode,
@@ -315,9 +334,9 @@ export const App: React.FC = () => {
               }
             }
             
-            console.log(`Successfully imported ${importedCount} products`);
+            console.log(`Successfully imported ${importedCount} products into ${categories.length} categories`);
             
-            // Force refresh the product list
+            // Reload to show imported items
             window.location.reload();
             
           } catch (err) {

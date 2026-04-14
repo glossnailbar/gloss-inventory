@@ -11,7 +11,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { ProductCard } from './ProductCard';
-import { SortlyHeader } from './SortlyHeader';
+import { SimpleHeader } from './SimpleHeader';
 import { CategoryFilter } from './CategoryFilter';
 import { BottomSheet } from '../shared/BottomSheet';
 import { useProducts } from '../../hooks/useProducts';
@@ -111,9 +111,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Sortly-style Header */}
+      {/* Header */}
       <div className="sticky top-0 z-20">
-        <SortlyHeader
+        <SimpleHeader
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onScanPress={onScanBarcode}
