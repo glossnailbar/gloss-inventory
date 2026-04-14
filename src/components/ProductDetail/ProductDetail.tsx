@@ -55,9 +55,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     : { label: 'In Stock', color: 'bg-green-500' };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Desktop Container */}
-      <div className="max-w-6xl mx-auto md:py-6 lg:py-8">
+    <div className="min-h-screen bg-gray-100">
+      {/* Desktop Container - Maximized */}
+      <div className="max-w-7xl mx-auto py-4 lg:py-6">
         {/* Card */}
         <div className="bg-white md:rounded-2xl md:shadow-lg overflow-hidden">
           {/* Header */}
@@ -85,12 +85,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
           </div>
 
-          {/* Main Content - Two Column Layout */}
-          <div className="lg:grid lg:grid-cols-2 lg:min-h-[600px]">
-            {/* Left Column - Images */}
-            <div className="bg-gray-50">
+          {/* Main Content - Two Column Layout - Maximized */}
+          <div className="xl:grid xl:grid-cols-5 xl:min-h-[calc(100vh-120px)]">
+            {/* Left Column - Images - Takes 3/5 on desktop */}
+            <div className="xl:col-span-3 bg-gray-50 flex flex-col">
               {/* Main Image */}
-              <div className="relative aspect-square lg:aspect-auto lg:h-[400px] xl:h-[500px]">
+              <div className="relative aspect-square lg:aspect-auto flex-1 min-h-[400px] md:min-h-[500px] xl:min-h-[700px]">
                 {activeImage ? (
                   <img
                     src={activeImage}
@@ -130,7 +130,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
 
             {/* Right Column - Product Info */}
-            <div className="p-4 md:p-6 lg:p-8 overflow-y-auto lg:max-h-[700px]">
+            <div className="xl:col-span-2 p-4 md:p-6 lg:p-8 xl:p-10 overflow-y-auto xl:max-h-[calc(100vh-120px)]">
               {/* Title Section */}
               <div className="mb-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{product.name}</h2>
