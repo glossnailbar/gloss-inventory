@@ -12,6 +12,8 @@ import React, { useState, useCallback } from 'react';
 import { ProductWithInventory, deleteProduct, updateProduct } from '../../db/operations/products';
 import { InventoryAdjustmentModal } from '../InventoryAdjustment/InventoryAdjustmentModal';
 import { InlineEditForm } from './InlineEditForm';
+import { TransferInventory } from './TransferInventory';
+import { useLocations } from '../../hooks/useLocations';
 
 export interface ProductDetailProps {
   product: ProductWithInventory;
@@ -29,6 +31,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const { locations } = useLocations('demo-gloss-heights');
 
   const handleDelete = useCallback(async () => {
     if (window.confirm('Are you sure you want to delete this product?')) {
@@ -274,6 +277,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   </div>
                 )}
               </Section>
+
+              {/* Transfer Inventory */}
+              {!isEditing && product.inventory.length > 0 && (
+                <TransferInventory
+                  product={product}
+                  locations={locations.map(l => ({ id: l.local_id, name: l.name }))}
+                  onSuccess={() => window.location.reload()}
+                />
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200">
