@@ -4,9 +4,8 @@
  * Tracks: transfers, adjustments, edits, stock changes
  */
 
-import { getAllFromStore, putToStore } from './database';
-import { STORES } from './schema';
-import { generateLocalId } from './database';
+import { STORES } from '../schema';
+import { getAllFromStore, putToStore, generateLocalId } from '../database';
 
 export type ActivityType = 
   | 'transfer_in'
