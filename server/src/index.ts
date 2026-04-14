@@ -15,6 +15,7 @@ import { syncRouter } from './routes/sync';
 import { productsRouter } from './routes/products';
 import { categoriesRouter } from './routes/categories';
 import { authRouter } from './routes/auth';
+import { indexRouter } from './routes/index';
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/', indexRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/categories', categoriesRouter);
