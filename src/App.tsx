@@ -24,13 +24,19 @@ import { initDatabase, getSyncState, deleteDatabase } from './db/database';
 const DEMO_ORG_ID = 'demo-gloss-heights';
 
 // Parse current URL hash
-const parseHash = (): { view: string; itemId?: string } => {
+const parseHash = (): { view: string; itemId?: string; locationId?: string } => {
   const hash = window.location.hash.slice(1) || '/';
   
   // Match /item/:id
   const itemMatch = hash.match(/^\/item\/(.*)$/);
   if (itemMatch) {
     return { view: 'item', itemId: itemMatch[1] };
+  }
+  
+  // Match /location/:id
+  const locationMatch = hash.match(/^\/location\/(.*)$/);
+  if (locationMatch) {
+    return { view: 'catalog', locationId: locationMatch[1] };
   }
   
   // Match other routes
@@ -82,8 +88,16 @@ export const App: React.FC = () => {
   // Handle URL hash changes
   useEffect(() => {
     const handleHashChange = async () => {
-      const { view, itemId } = parseHash();
+      const { view, itemId, locationId } = parseHash();
       setCurrentView(view);
+      
+      // Set selected location from URL if present
+      if (locationId) {
+        setSelectedLocation(locationId);
+      } else if (view !== 'catalog') {
+        // Only clear location if not on catalog view
+        // (keep location if just changing views within catalog)
+      }
       
       if (view === 'item' && itemId) {
         // Load product from URL
@@ -156,6 +170,10 @@ export const App: React.FC = () => {
   const handleViewAll = useCallback(() => {
     setSelectedLocation(null);
     window.location.hash = '#/';
+  }, []);
+
+  const handleLocationSelect = useCallback((locationId: string) => {
+    window.location.hash = `#/location/${locationId}`;
   }, []);
 
   const handleScanBarcode = useCallback(() => {
@@ -255,8 +273,7 @@ export const App: React.FC = () => {
               onBack={handleBackToCatalog}
               onDelete={handleBackToCatalog}
               onLocationSelect={(locationId) => {
-                setSelectedLocation(locationId);
-                window.location.hash = '#/';
+                window.location.hash = `#/location/${locationId}`;
               }}
             />
           ) : currentView === 'scanner' ? (
