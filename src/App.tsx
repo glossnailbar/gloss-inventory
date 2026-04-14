@@ -189,8 +189,8 @@ export const App: React.FC = () => {
           : `${syncStatus.pendingCount} changes pending`}
       </div>
 
-      {/* Main Content */}
-      <div className={!isOnline || syncStatus.pendingCount > 0 ? 'pt-10' : ''}>
+      {/* Main Content - Centered on Desktop */}
+      <div className={`mx-auto w-full max-w-7xl ${!isOnline || syncStatus.pendingCount > 0 ? 'pt-10' : ''}`}>
         {currentView === 'catalog' && (
           <ProductCatalog
             organizationId={DEMO_ORG_ID}

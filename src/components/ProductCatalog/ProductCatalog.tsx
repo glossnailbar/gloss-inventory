@@ -108,9 +108,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   }, [refresh]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Sticky Header */}
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Sticky Header - Full width on mobile, contained on desktop */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto w-full">
         {/* Search Bar */}
         <SearchBar
           value={searchQuery}
@@ -127,11 +128,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           onSelect={setSelectedCategory}
           className="px-4 pb-3"
         />
+        </div>
       </div>
 
-      {/* Product Grid */}
-      <div 
-        className="flex-1 overflow-y-auto p-4"
+      {/* Product Grid - Centered container for desktop */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto w-full p-4"
         onScroll={(e) => {
           // TODO: Implement infinite scroll
         }}
@@ -185,6 +187,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
       </button>
+
+      </div>
 
       {/* Bottom Sheet for Product Actions */}
       <BottomSheet
