@@ -7,6 +7,7 @@ import { ProductWithInventory } from '../../db/operations/products';
 import { getAllFromStore, putToStore, deleteFromStore } from '../../db/database';
 import { STORES, InventoryLevel } from '../../db/schema';
 import { generateLocalId } from '../../db/database';
+import { logActivity } from '../../db/operations/itemActivity';
 
 export interface TransferInventoryProps {
   product: ProductWithInventory;
@@ -92,6 +93,23 @@ export const TransferInventory: React.FC<TransferInventoryProps> = ({
         };
         await putToStore(STORES.inventory_levels, newLevel);
       }
+
+      // Log the transfer activities
+      await logActivity(product.local_id, 'transfer_out', {
+        quantity_before: fromLevel.quantity_on_hand,
+        quantity_after: newFromQuantity,
+        from_location_id: fromLocation,
+        to_location_id: toLocation,
+        note: `Moved ${quantity} to ${getLocationName(toLocation)}`,
+      });
+
+      await logActivity(product.local_id, 'transfer_in', {
+        quantity_before: toLevel?.quantity_on_hand || 0,
+        quantity_after: (toLevel?.quantity_on_hand || 0) + parseInt(quantity),
+        from_location_id: fromLocation,
+        to_location_id: toLocation,
+        note: `Received ${quantity} from ${getLocationName(fromLocation)}`,
+      });
 
       // Reset form
       setFromLocation('');

@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { ProductWithInventory } from '../../db/operations/products';
-import { updateProduct } from '../../db/operations/products';
+import { ProductWithInventory, updateProduct } from '../../db/operations/products';
+import { logActivity } from '../../db/operations/itemActivity';
 
 export interface InlineEditFormProps {
   product: ProductWithInventory;
@@ -64,6 +64,12 @@ export const InlineEditForm: React.FC<InlineEditFormProps> = ({
         tags: formData.tags || null,
         unit_of_measure: formData.unit_of_measure || 'piece',
       });
+
+      // Log the edit activity
+      await logActivity(product.local_id, 'edit', {
+        note: 'Updated product details',
+      });
+
       onSave();
     } catch (err) {
       console.error('Failed to update product:', err);

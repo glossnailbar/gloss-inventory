@@ -13,6 +13,7 @@ import { ProductWithInventory, deleteProduct, updateProduct } from '../../db/ope
 import { InventoryAdjustmentModal } from '../InventoryAdjustment/InventoryAdjustmentModal';
 import { InlineEditForm } from './InlineEditForm';
 import { TransferInventory } from './TransferInventory';
+import { ItemHistory } from './ItemHistory';
 import { useLocations } from '../../hooks/useLocations';
 
 export interface ProductDetailProps {
@@ -291,6 +292,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   locations={locations.map(l => ({ id: l.local_id, name: l.name }))}
                   onSuccess={() => window.location.reload()}
                 />
+              )}
+
+              {/* Activity History */}
+              {!isEditing && (
+                <Section title="Activity History">
+                  <ItemHistory product={product} />
+                </Section>
               )}
 
               {/* Action Buttons */}

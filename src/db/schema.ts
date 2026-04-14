@@ -6,7 +6,7 @@
  */
 
 export const DB_NAME = 'GlossInventory';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 // Sync status for all records
 export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'error';
@@ -152,6 +152,31 @@ export interface InventoryTransaction extends SyncableRecord {
   created_by?: string;
 }
 
+// ============ ACTIVITY LOG ============
+
+export type ActivityType = 
+  | 'transfer_in'
+  | 'transfer_out' 
+  | 'adjustment'
+  | 'edit'
+  | 'created'
+  | 'deleted';
+
+export interface ItemActivity {
+  id: string;
+  local_id: string;
+  product_id: string;
+  type: ActivityType;
+  quantity_before?: number;
+  quantity_after?: number;
+  from_location_id?: string;
+  to_location_id?: string;
+  note?: string;
+  created_by?: string;
+  created_at: string;
+  sync_status: 'synced' | 'pending';
+}
+
 export interface CostLayer {
   id: string;
   product_id: string;
@@ -268,6 +293,7 @@ export const STORES = {
   cost_layers: 'cost_layers',
   purchase_orders: 'purchase_orders',
   purchase_order_items: 'purchase_order_items',
+  item_activity: 'item_activity',
   sync_queue: 'sync_queue',
   sync_conflicts: 'sync_conflicts',
   sync_state: 'sync_state',
@@ -308,6 +334,10 @@ export const STORE_INDICES: Record<string, StoreIndex[]> = {
   ],
   [STORES.sync_conflicts]: [
     { name: 'by_status', keyPath: 'resolution' },
+  ],
+  [STORES.item_activity]: [
+    { name: 'by_product', keyPath: 'product_id' },
+    { name: 'by_date', keyPath: 'created_at' },
   ],
 };
 
