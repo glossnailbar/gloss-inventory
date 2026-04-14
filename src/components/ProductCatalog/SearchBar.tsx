@@ -49,7 +49,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       >
         {/* Search Icon */}
         <svg
-          className={`w-5 h-5 ml-3 transition-colors ${isFocused ? 'text-rose-500' : 'text-gray-400'}`}
+          className={`w-5 h-5 md:w-4 md:h-4 ml-3 transition-colors ${isFocused ? 'text-rose-500' : 'text-gray-400'}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -103,16 +103,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           <button
             onClick={onScanPress}
             className="
-              p-2 mr-2
+              p-1.5 mr-2 md:p-2
               bg-rose-500 text-white
               rounded-lg
               hover:bg-rose-600
               active:scale-95
               transition-all
+              flex-shrink-0
             "
             aria-label="Scan barcode"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
