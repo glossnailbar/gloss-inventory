@@ -31,7 +31,8 @@ export const FixLocations: React.FC = () => {
         const locationCounts: Record<string, number> = {};
         
         for (const product of products) {
-          const loc = product.location || 'default';
+          // Check multiple possible location field names
+          const loc = product.location || product.Location || product['Primary Folder'] || 'default';
           locationCounts[loc] = (locationCounts[loc] || 0) + 1;
         }
         
@@ -57,15 +58,28 @@ export const FixLocations: React.FC = () => {
     try {
       // Step 1: Get all unique locations from product data
       const products = await getAllFromStore(STORES.products);
+      console.log('Total products:', products.length);
+      console.log('Sample product:', products[0]);
+      
       const uniqueLocations = new Set<string>();
       
       for (const product of products) {
-        if (product.location && product.location !== 'default') {
-          uniqueLocations.add(product.location);
+        // Check multiple possible location field names
+        const loc = product.location || product.Location || product['Primary Folder'];
+        if (loc && loc !== 'default') {
+          uniqueLocations.add(loc);
+          console.log(`Found location "${loc}" for product: ${product.name}`);
         }
       }
       
       console.log('Found locations in products:', Array.from(uniqueLocations));
+      
+      if (uniqueLocations.size === 0) {
+        errors.push('No locations found in product data. The Sortly import may not have captured the Location column.');
+        setResult({ locationsCreated, itemsUpdated, errors });
+        setIsRunning(false);
+        return;
+      }
       
       // Step 2: Create Location records for each
       const locationIdMap: Record<string, string> = {};
