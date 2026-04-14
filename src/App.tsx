@@ -2,9 +2,10 @@
  * Gloss Inventory - Main App Component
  * 
  * Features:
+ * - URL-based routing for each item page
  * - Sidebar navigation with locations
- * - View All Items and location-based filtering
- * - Responsive layout
+ * - Item detail page has own URL (/#/item/:id)
+ * - Refresh preserves current page
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,17 +15,32 @@ import { BarcodeScanner } from './components/BarcodeScanner/BarcodeScanner';
 import { AddProductModal } from './components/AddProductModal/AddProductModal';
 import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
-import { ProductWithInventory } from './db/operations/products';
+import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
-
-type View = 'catalog' | 'detail' | 'scanner' | 'add-product';
 
 // Demo organization ID for testing
 const DEMO_ORG_ID = 'demo-gloss-heights';
 
+// Parse current URL hash
+const parseHash = (): { view: string; itemId?: string } => {
+  const hash = window.location.hash.slice(1) || '/';
+  
+  // Match /item/:id
+  const itemMatch = hash.match(/^\/item\/(.*)$/);
+  if (itemMatch) {
+    return { view: 'item', itemId: itemMatch[1] };
+  }
+  
+  // Match other routes
+  if (hash === '/scanner') return { view: 'scanner' };
+  if (hash === '/add') return { view: 'add' };
+  
+  return { view: 'catalog' };
+};
+
 export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('catalog');
+  const [currentView, setCurrentView] = useState<string>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<ProductWithInventory | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -59,6 +75,34 @@ export const App: React.FC = () => {
     };
 
     init();
+  }, []);
+
+  // Handle URL hash changes
+  useEffect(() => {
+    const handleHashChange = async () => {
+      const { view, itemId } = parseHash();
+      setCurrentView(view);
+      
+      if (view === 'item' && itemId) {
+        // Load product from URL
+        try {
+          const product = await getProductWithInventory(itemId);
+          setSelectedProduct(product || null);
+        } catch (err) {
+          console.error('Failed to load product:', err);
+          setSelectedProduct(null);
+        }
+      } else {
+        setSelectedProduct(null);
+      }
+    };
+
+    // Initial load
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   // Monitor online/offline status
@@ -98,42 +142,35 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Navigation handlers
+  // Navigation handlers - update URL hash
   const handleProductSelect = useCallback((product: ProductWithInventory) => {
-    setSelectedProduct(product);
-    setCurrentView('detail');
+    window.location.hash = `#/item/${product.local_id}`;
   }, []);
 
   const handleBackToCatalog = useCallback(() => {
-    setSelectedProduct(null);
-    setCurrentView('catalog');
+    window.location.hash = '#/';
   }, []);
 
   const handleViewAll = useCallback(() => {
     setSelectedLocation(null);
-    setCurrentView('catalog');
+    window.location.hash = '#/';
   }, []);
 
   const handleScanBarcode = useCallback(() => {
-    setCurrentView('scanner');
+    window.location.hash = '#/scanner';
   }, []);
 
   const handleAddProduct = useCallback(() => {
-    setCurrentView('add-product');
+    window.location.hash = '#/add';
   }, []);
 
   const handleScanComplete = useCallback(async (barcode: string) => {
     const result = await scanBarcode(DEMO_ORG_ID, barcode);
     if (result) {
-      const { getProductWithInventory } = await import('./db/operations/products');
-      const product = await getProductWithInventory(result.product.local_id);
-      if (product) {
-        setSelectedProduct(product);
-        setCurrentView('detail');
-        return;
-      }
+      window.location.hash = `#/item/${result.product.local_id}`;
+    } else {
+      window.location.hash = '#/add';
     }
-    setCurrentView('add-product');
   }, []);
 
   // Loading state
@@ -162,6 +199,9 @@ export const App: React.FC = () => {
       </div>
     );
   }
+
+  // Determine what to show
+  const isItemPage = currentView === 'item' && selectedProduct;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -192,29 +232,51 @@ export const App: React.FC = () => {
 
       {/* Main Layout */}
       <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <Sidebar
-          selectedLocation={selectedLocation}
-          onSelectLocation={setSelectedLocation}
-          onViewAll={handleViewAll}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
+        {/* Sidebar - Hidden on item page on mobile */}
+        <div className={`${isItemPage ? 'hidden md:block' : ''}`}>
+          <Sidebar
+            selectedLocation={selectedLocation}
+            onSelectLocation={setSelectedLocation}
+            onViewAll={handleViewAll}
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+        </div>
 
         {/* Main Content */}
         <main className={`flex-1 ${!isOnline || syncStatus.pendingCount > 0 ? 'pt-10' : ''}`}>
-          <div className="p-4 md:p-6 lg:p-8">
-            {/* Page Title */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {selectedLocation ? 'Location Items' : 'All Items'}
-              </h1>
-              <p className="text-gray-500">
-                {selectedLocation ? `Viewing items in ${selectedLocation}` : 'Viewing all inventory items'}
-              </p>
+          {/* Item Detail Page - Full width, no padding */}
+          {isItemPage ? (
+            <ProductDetail
+              product={selectedProduct}
+              onBack={handleBackToCatalog}
+              onDelete={handleBackToCatalog}
+            />
+          ) : currentView === 'scanner' ? (
+            <div className="p-4 md:p-6 lg:p-8">
+              <BarcodeScanner onScan={handleScanComplete} onClose={() => window.location.hash = '#/'} />
             </div>
+          ) : currentView === 'add' ? (
+            <div className="p-4 md:p-6 lg:p-8">
+              <AddProductModal
+                organizationId={DEMO_ORG_ID}
+                onClose={() => window.location.hash = '#/'}
+                onSuccess={() => window.location.hash = '#/'}
+              />
+            </div>
+          ) : (
+            /* Catalog View */
+            <div className="p-4 md:p-6 lg:p-8">
+              {/* Page Title */}
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {selectedLocation ? 'Location Items' : 'All Items'}
+                </h1>
+                <p className="text-gray-500">
+                  {selectedLocation ? `Viewing items in ${selectedLocation}` : 'Viewing all inventory items'}
+                </p>
+              </div>
 
-            {currentView === 'catalog' && (
               <ProductCatalog
                 organizationId={DEMO_ORG_ID}
                 selectedLocation={selectedLocation}
@@ -228,28 +290,8 @@ export const App: React.FC = () => {
                   window.location.reload();
                 }}
               />
-            )}
-
-            {currentView === 'detail' && selectedProduct && (
-              <ProductDetail
-                product={selectedProduct}
-                onBack={handleBackToCatalog}
-                onDelete={handleBackToCatalog}
-              />
-            )}
-
-            {currentView === 'scanner' && (
-              <BarcodeScanner onScan={handleScanComplete} onClose={() => setCurrentView('catalog')} />
-            )}
-
-            {currentView === 'add-product' && (
-              <AddProductModal
-                organizationId={DEMO_ORG_ID}
-                onClose={() => setCurrentView('catalog')}
-                onSuccess={() => setCurrentView('catalog')}
-              />
-            )}
-          </div>
+            </div>
+          )}
         </main>
       </div>
 
