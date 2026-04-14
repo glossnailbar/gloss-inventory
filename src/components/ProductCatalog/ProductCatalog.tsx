@@ -23,6 +23,7 @@ export interface ProductCatalogProps {
   onScanBarcode?: () => void;
   onAddProduct?: () => void;
   onImport?: () => void;
+  onClearData?: () => void;
 }
 
 export const ProductCatalog: React.FC<ProductCatalogProps> = ({
@@ -31,6 +32,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   onScanBarcode,
   onAddProduct,
   onImport,
+  onClearData,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -119,6 +121,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           onScanPress={onScanBarcode}
           onImport={onImport}
           onAddPress={onAddProduct}
+          onClearData={onClearData}
           itemCount={filteredProducts.length}
         />
         

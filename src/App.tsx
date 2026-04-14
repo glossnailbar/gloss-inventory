@@ -251,6 +251,16 @@ export const App: React.FC = () => {
             onScanBarcode={handleScanBarcode}
             onAddProduct={handleAddProduct}
             onImport={() => setIsImportModalOpen(true)}
+            onClearData={async () => {
+              if (!confirm('Clear all data? This will delete all products and categories.')) return;
+              try {
+                const { deleteDatabase } = await import('./db/database');
+                await deleteDatabase();
+                window.location.reload();
+              } catch (err) {
+                console.error('Failed to clear database:', err);
+              }
+            }}
           />
         )}
 

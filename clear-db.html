@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear Database</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; max-width: 500px; margin: 0 auto; }
+    button { padding: 15px 30px; font-size: 16px; cursor: pointer; }
+    .danger { background: #ef4444; color: white; border: none; border-radius: 8px; }
+    .success { color: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>Clear Gloss Inventory Database</h1>
+  <p>This will delete all products, categories, and sync queue items from IndexedDB.</p>
+  <button class="danger" onclick="clearDB()">Clear All Data</button>
+  <p id="status"></p>
+  
+  <script>
+    async function clearDB() {
+      const status = document.getElementById('status');
+      try {
+        const dbs = ['GlossInventory'];
+        for (const dbName of dbs) {
+          await new Promise((resolve, reject) => {
+            const req = indexedDB.deleteDatabase(dbName);
+            req.onsuccess = resolve;
+            req.onerror = reject;
+          });
+        }
+        status.innerHTML = '<span class="success">✓ Database cleared! Refresh the app now.</span>';
+      } catch (err) {
+        status.innerHTML = 'Error: ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>

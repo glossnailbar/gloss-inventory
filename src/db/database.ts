@@ -377,3 +377,32 @@ export async function* iterateStore<T extends StoreRecord>(
     });
   }
 }
+
+/**
+ * Delete the entire database
+ */
+export async function deleteDatabase(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Close existing connection
+    if (dbInstance) {
+      dbInstance.close();
+      dbInstance = null;
+    }
+
+    const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+
+    deleteRequest.onsuccess = () => {
+      console.log('[DB] Database deleted successfully');
+      resolve();
+    };
+
+    deleteRequest.onerror = () => {
+      console.error('[DB] Failed to delete database:', deleteRequest.error);
+      reject(deleteRequest.error);
+    };
+
+    deleteRequest.onblocked = () => {
+      console.warn('[DB] Database deletion blocked - close other tabs');
+    };
+  });
+}
