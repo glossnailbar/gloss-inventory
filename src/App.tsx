@@ -170,10 +170,6 @@ export const App: React.FC = () => {
     window.location.hash = '#/';
   }, [setSelectedLocation]);
 
-  const handleLocationSelect = useCallback((locationId: string) => {
-    window.location.hash = `#/location/${locationId}`;
-  }, []);
-
   const handleScanBarcode = useCallback(() => {
     window.location.hash = '#/scanner';
   }, []);
@@ -384,30 +380,30 @@ export const App: React.FC = () => {
                   organization_id: DEMO_ORG_ID,
                   category_id: categoryId,
                   vendor_id: vendorId,
-                  description: product.description,
-                  sku: product.sku,
-                  barcode: product.barcode,
+                  description: product.description || undefined,
+                  sku: product.sku || undefined,
+                  barcode: product.barcode || undefined,
                   unit_of_measure: product.unit_of_measure || 'piece',
                   reorder_point: product.reorder_point || 0,
                   reorder_quantity: product.max_level || 0,
-                  max_level: product.max_level,
-                  unit_cost: product.unit_cost,
-                  purchase_link: product.purchase_link,
-                  brand: product.brand,
-                  origin: product.origin,
-                  tags: product.tags,
-                  item_size: product.item_size,
-                  price_per: product.price_per,
-                  pcs_per_box: product.pcs_per_box,
-                  attribute1_name: product.attribute1_name,
-                  attribute1_value: product.attribute1_value,
-                  attribute2_name: product.attribute2_name,
-                  attribute2_value: product.attribute2_value,
-                  attribute3_name: product.attribute3_name,
-                  attribute3_value: product.attribute3_value,
-                  image_url: product.image_url,
-                  image_url2: product.image_url2,
-                  image_url3: product.image_url3,
+                  max_level: product.max_level || undefined,
+                  unit_cost: product.unit_cost || undefined,
+                  purchase_link: product.purchase_link || undefined,
+                  brand: product.brand || undefined,
+                  origin: product.origin || undefined,
+                  tags: product.tags || undefined,
+                  item_size: product.item_size || undefined,
+                  price_per: product.price_per || undefined,
+                  pcs_per_box: product.pcs_per_box || undefined,
+                  attribute1_name: product.attribute1_name || undefined,
+                  attribute1_value: product.attribute1_value || undefined,
+                  attribute2_name: product.attribute2_name || undefined,
+                  attribute2_value: product.attribute2_value || undefined,
+                  attribute3_name: product.attribute3_name || undefined,
+                  attribute3_value: product.attribute3_value || undefined,
+                  image_url: product.image_url || undefined,
+                  image_url2: product.image_url2 || undefined,
+                  image_url3: product.image_url3 || undefined,
                 }, product.quantity > 0 ? [{ location_id: locationId, quantity: product.quantity }] : undefined);
                 
                 importedCount++;
