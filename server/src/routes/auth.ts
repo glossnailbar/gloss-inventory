@@ -34,24 +34,31 @@ export const authenticateToken = (req: any, res: any, next: any) => {
 
 // Sign up
 router.post('/signup', async (req, res) => {
+  console.log('Signup request received:', req.body);
   const db = pool;
   const { email, password, firstName, lastName, organizationName } = req.body;
 
   try {
+    console.log('Starting signup for email:', email);
     // Check if user exists
+    console.log('Checking if user exists...');
     const existingUser = await db.query(
       'SELECT id FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
+    console.log('Existing user check complete:', existingUser.rows.length);
 
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     // Hash password
+    console.log('Hashing password...');
     const passwordHash = await bcrypt.hash(password, 10);
+    console.log('Password hashed successfully');
 
     // Create user
+    console.log('Creating user...');
     const userResult = await db.query(
       `INSERT INTO users (email, password_hash, first_name, last_name)
        VALUES ($1, $2, $3, $4)
