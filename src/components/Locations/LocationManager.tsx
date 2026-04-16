@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAllFromStore, putToStore, deleteFromStore } from '../../db/database';
-import { STORES, Location } from '../../db/schema';
+import { STORES, Category } from '../../db/schema';
 import { generateLocalId } from '../../db/database';
 
 interface LocationManagerProps {
@@ -25,10 +25,10 @@ export const LocationManager: React.FC<LocationManagerProps> = ({
   onClose,
   onLocationsUpdated,
 }) => {
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [locations, setLocations] = useState<Category[]>([]);
   const [newLocationName, setNewLocationName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [editingLocation, setEditingLocation] = useState<Category | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,8 +38,9 @@ export const LocationManager: React.FC<LocationManagerProps> = ({
 
   const loadLocations = async () => {
     try {
-      const locs = await getAllFromStore<Location>(STORES.locations);
-      setLocations(locs.filter(l => l.is_active !== false));
+      // Load categories as locations (Sortly folders)
+      const cats = await getAllFromStore<Category>(STORES.categories);
+      setLocations(cats.filter(l => l.is_active !== false));
     } catch (err) {
       console.error('Failed to load locations:', err);
     } finally {
@@ -50,7 +51,7 @@ export const LocationManager: React.FC<LocationManagerProps> = ({
   const handleAddLocation = async () => {
     if (!newLocationName.trim()) return;
 
-    const newLocation: Location = {
+    const newCategory: Category = {
       local_id: generateLocalId(),
       organization_id: organizationId,
       name: newLocationName.trim(),
@@ -62,16 +63,16 @@ export const LocationManager: React.FC<LocationManagerProps> = ({
     };
 
     try {
-      await putToStore(STORES.locations, newLocation);
+      await putToStore(STORES.categories, newCategory);
       setNewLocationName('');
       await loadLocations();
       onLocationsUpdated?.();
     } catch (err) {
-      console.error('Failed to add location:', err);
+      console.error('Failed to add category:', err);
     }
   };
 
-  const handleUpdateLocation = async (location: Location, newName: string) => {
+  const handleUpdateLocation = async (location: Category, newName: string) => {
     if (!newName.trim()) return;
 
     const updated: Location = {
@@ -83,7 +84,7 @@ export const LocationManager: React.FC<LocationManagerProps> = ({
     };
 
     try {
-      await putToStore(STORES.locations, updated);
+      await putToStore(STORES.categories, updated);
       setEditingLocation(null);
       await loadLocations();
       onLocationsUpdated?.();
@@ -92,11 +93,11 @@ export const LocationManager: React.FC<LocationManagerProps> = ({
     }
   };
 
-  const handleDeleteLocation = async (location: Location) => {
+  const handleDeleteLocation = async (location: Category) => {
     if (!confirm(`Delete location "${location.name}"?`)) return;
 
     try {
-      await deleteFromStore(STORES.locations, location.local_id);
+      await deleteFromStore(STORES.categories, location.local_id);
       await loadLocations();
       onLocationsUpdated?.();
     } catch (err) {
