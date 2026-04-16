@@ -60,7 +60,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       try {
         // Get all locations directly from store (same as useLocations hook)
         const { STORES } = await import('../../db/schema');
-        const allLocations = await getAllFromStore<{ local_id: string; name: string }>(STORES.locations);
+        let allLocations = await getAllFromStore<{ local_id: string; name: string }>(STORES.locations);
+        
+        // Fallback: if no locations in store, extract from folder names in products
+        if (allLocations.length === 0) {
+          console.log('[Sidebar] No locations in store, extracting from products...');
+          const products = await getAllFromStore<{ folder: string }>(STORES.products);
+          const folderNames = [...new Set(products.map(p => p.folder).filter(Boolean))];
+          allLocations = folderNames.map((name, i) => ({
+            local_id: `loc-${Date.now()}-${i}`,
+            name: name
+          }));
+          console.log('[Sidebar] Extracted from products:', allLocations);
+        }
         
         console.log('[Sidebar] Loaded locations:', allLocations.length, allLocations.map(l => l.name));
         

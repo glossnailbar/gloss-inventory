@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="checkLocations()">Check Locations</button>
+<pre id="output"></pre>
+<script>
+async function checkLocations() {
+  const db = await openDB('GlossInventory', 1);
+  const tx = db.transaction('locations', 'readonly');
+  const store = tx.objectStore('locations');
+  const locations = await store.getAll();
+  document.getElementById('output').textContent = JSON.stringify(locations, null, 2);
+}
+
+function openDB(name, version) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, version);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+</script>
+</body>
+</html>
