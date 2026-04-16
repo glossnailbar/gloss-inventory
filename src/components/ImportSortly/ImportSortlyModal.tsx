@@ -149,8 +149,9 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
         vendorSet.add(vendor.trim());
       }
       
-      // Extract location - Sortly has "Location" column
-      const location = row['Location'];
+      // Extract location - use Sortly Folder as location since Location column doesn't exist
+      const folderName = row['Primary Folder'] || row['Subfolder-level1'];
+      const location = folderName && typeof folderName === 'string' ? folderName.trim() : null;
       if (location && typeof location === 'string' && location.trim()) {
         locationSet.add(location.trim());
       }
@@ -173,8 +174,9 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       const folder = row['Primary Folder'] || row['Subfolder-level1'] || 'Uncategorized';
       const vendorName = row['Vendor'];
       
-      // Parse location from Sortly
-      const locationName = row['Location'];
+      // Parse location from Sortly - use Folder as location
+      const folderForLocation = row['Primary Folder'] || row['Subfolder-level1'];
+      const locationName = folderForLocation && typeof folderForLocation === 'string' ? folderForLocation.trim() : null;
       
       // Parse quantity - handle both number and string
       const rawQty = row['Quantity'];
