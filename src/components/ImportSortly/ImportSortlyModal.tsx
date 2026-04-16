@@ -152,10 +152,13 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       // Extract location - use Sortly Folder as location since Location column doesn't exist
       const folderName = row['Primary Folder'] || row['Subfolder-level1'];
       const location = folderName && typeof folderName === 'string' ? folderName.trim() : null;
-      if (location && typeof location === 'string' && location.trim()) {
-        locationSet.add(location.trim());
+      if (location) {
+        locationSet.add(location);
       }
     });
+    
+    console.log('[Parse] Extracted locations:', Array.from(locationSet));
+    console.log('[Parse] Extracted folders:', Array.from(folderSet));
     
     // Create category objects
     const categories: ImportCategory[] = Array.from(folderSet).map((name, index) => ({
