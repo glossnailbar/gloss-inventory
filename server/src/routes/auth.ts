@@ -1,164 +1,241 @@
 /**
- * Auth Routes
- * 
- * JWT authentication for API access.
+ * Auth Routes - User authentication and organization management
  */
 
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { pool } from '../db/pool';
+import { Pool } from 'pg';
+import crypto from 'crypto';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password required' });
-    }
-    
-    // Find user
-    const result = await pool.query(
-      'SELECT id, email, password, name, role, organization_id FROM users WHERE email = $1 AND is_active = true',
-      [email.toLowerCase()]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    const user = result.rows[0];
-    
-    // Verify password
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    // Generate JWT
-    const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email,
-        organizationId: user.organization_id,
-        role: user.role 
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        organizationId: user.organization_id,
-      },
-    });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+// JWT secret from environment
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES_IN = '24h';
+
+// Middleware to verify JWT
+export const authenticateToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
   }
-});
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, name, organizationId } = req.body;
-    
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Email, password, and name required' });
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
     }
-    
+    req.user = user;
+    next();
+  });
+};
+
+// Sign up
+router.post('/signup', async (req, res) => {
+  const db: Pool = (req as any).db;
+  const { email, password, firstName, lastName, organizationName } = req.body;
+
+  try {
     // Check if user exists
-    const existing = await pool.query(
+    const existingUser = await db.query(
       'SELECT id FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
-    
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'User already exists' });
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'Email already registered' });
     }
-    
+
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
+    const passwordHash = await bcrypt.hash(password, 10);
+
     // Create user
-    const result = await pool.query(
-      `INSERT INTO users (id, email, password, name, role, organization_id, is_active, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, 'admin', $4, true, NOW())
-       RETURNING id, email, name, role, organization_id`,
-      [email.toLowerCase(), hashedPassword, name, organizationId || null]
+    const userResult = await db.query(
+      `INSERT INTO users (email, password_hash, first_name, last_name)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, email, first_name, last_name, created_at`,
+      [email.toLowerCase(), passwordHash, firstName, lastName]
     );
-    
-    const user = result.rows[0];
-    
+
+    const user = userResult.rows[0];
+
+    // Create organization
+    const orgResult = await db.query(
+      `INSERT INTO organizations (name, created_at, updated_at)
+       VALUES ($1, NOW(), NOW())
+       RETURNING *`,
+      [organizationName || `${firstName}'s Organization`]
+    );
+
+    const organization = orgResult.rows[0];
+
+    // Add user as owner
+    await db.query(
+      `INSERT INTO organization_members (user_id, organization_id, role, joined_at, is_active)
+       VALUES ($1, $2, 'owner', NOW(), true)`,
+      [user.id, organization.id]
+    );
+
     // Generate JWT
     const token = jwt.sign(
       { 
         userId: user.id, 
         email: user.email,
-        organizationId: user.organization_id,
-        role: user.role 
+        organizationId: organization.id,
+        role: 'owner'
       },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: JWT_EXPIRES_IN }
     );
-    
+
     res.status(201).json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
-        role: user.role,
-        organizationId: user.organization_id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      },
+      organization: {
+        id: organization.id,
+        name: organization.name,
+        role: 'owner',
       },
     });
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Failed to create account' });
   }
 });
 
-// GET /api/auth/me
-router.get('/me', async (req, res) => {
+// Login
+router.post('/login', async (req, res) => {
+  const db: Pool = (req as any).db;
+  const { email, password } = req.body;
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-    
-    const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
-    const result = await pool.query(
-      'SELECT id, email, name, role, organization_id FROM users WHERE id = $1',
-      [decoded.userId]
+    // Find user
+    const userResult = await db.query(
+      `SELECT id, email, password_hash, first_name, last_name, is_active
+       FROM users WHERE email = $1`,
+      [email.toLowerCase()]
     );
-    
-    if (result.rows.length === 0) {
+
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = userResult.rows[0];
+
+    if (!user.is_active) {
+      return res.status(401).json({ error: 'Account disabled' });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Get user's organizations
+    const orgsResult = await db.query(
+      `SELECT om.organization_id, om.role, o.name
+       FROM organization_members om
+       JOIN organizations o ON o.id = om.organization_id
+       WHERE om.user_id = $1 AND om.is_active = true`,
+      [user.id]
+    );
+
+    if (orgsResult.rows.length === 0) {
+      return res.status(400).json({ error: 'No organization access' });
+    }
+
+    // Use first organization (could add org selection later)
+    const org = orgsResult.rows[0];
+
+    // Update last login
+    await db.query(
+      'UPDATE users SET last_login_at = NOW() WHERE id = $1',
+      [user.id]
+    );
+
+    // Generate JWT
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email,
+        organizationId: org.organization_id,
+        role: org.role
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      },
+      organization: {
+        id: org.organization_id,
+        name: org.name,
+        role: org.role,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Get current user
+router.get('/me', authenticateToken, async (req: any, res) => {
+  const db: Pool = (req as any).db;
+  const userId = req.user.userId;
+
+  try {
+    const userResult = await db.query(
+      'SELECT id, email, first_name, last_name FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    const user = result.rows[0];
+
+    const user = userResult.rows[0];
+
+    // Get organizations
+    const orgsResult = await db.query(
+      `SELECT om.organization_id, om.role, o.name
+       FROM organization_members om
+       JOIN organizations o ON o.id = om.organization_id
+       WHERE om.user_id = $1 AND om.is_active = true`,
+      [userId]
+    );
+
     res.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      organizationId: user.organization_id,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      },
+      organizations: orgsResult.rows.map((org: any) => ({
+        id: org.organization_id,
+        name: org.name,
+        role: org.role,
+      })),
     });
-  } catch (err) {
-    console.error('Auth check error:', err);
-    res.status(401).json({ error: 'Invalid token' });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Failed to get user' });
   }
 });
 
-export { router as authRouter };
+export default router;

@@ -6,6 +6,7 @@
  * - Sidebar navigation with locations
  * - Item detail page has own URL (/#/item/:id)
  * - Refresh preserves current page
+ * - Multi-account authentication
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -16,9 +17,12 @@ import { AddProductModal } from './components/AddProductModal/AddProductModal';
 import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { LocationManager } from './components/Locations/LocationManager';
+import { LoginForm } from './components/Auth/LoginForm';
+import { SignupForm } from './components/Auth/SignupForm';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
+import { isAuthenticated, clearAuthToken, getAuthToken } from './api/auth';
 
 // Demo organization ID for testing
 const DEMO_ORG_ID = 'demo-gloss-heights';
@@ -46,7 +50,11 @@ const parseHash = (): { view: string; itemId?: string; locationId?: string } => 
   return { view: 'catalog' };
 };
 
+type AuthView = 'login' | 'signup';
+
 export const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(isAuthenticated());
+  const [authView, setAuthView] = useState<AuthView>('login');
   const [currentView, setCurrentView] = useState<string>('catalog');
   const [selectedProduct, setSelectedProduct] = useState<ProductWithInventory | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
@@ -217,6 +225,24 @@ export const App: React.FC = () => {
   // Determine what to show
   const isItemPage = currentView === 'item' && selectedProduct;
 
+  // Show auth screens if not logged in
+  if (!isLoggedIn) {
+    if (authView === 'login') {
+      return (
+        <LoginForm
+          onSuccess={() => setIsLoggedIn(true)}
+          onSwitchToSignup={() => setAuthView('signup')}
+        />
+      );
+    }
+    return (
+      <SignupForm
+        onSuccess={() => setIsLoggedIn(true)}
+        onSwitchToLogin={() => setAuthView('login')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Offline / Sync Status Bar */}
@@ -242,6 +268,17 @@ export const App: React.FC = () => {
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
+      </button>
+
+      {/* Logout Button */}
+      <button
+        onClick={() => {
+          clearAuthToken();
+          setIsLoggedIn(false);
+        }}
+        className="fixed top-4 right-4 z-30 px-3 py-2 bg-white rounded-lg shadow-md text-sm text-gray-600 hover:text-rose-600 hover:bg-rose-50"
+      >
+        Logout
       </button>
 
       {/* Main Layout */}
