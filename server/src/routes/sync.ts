@@ -18,7 +18,7 @@ router.use(authenticateToken);
 // Validation schemas
 const changeSchema = z.object({
   local_id: z.string(),
-  table: z.enum(['products', 'inventory_transactions', 'purchase_orders', 'categories', 'vendors', 'locations', 'inventory_levels', 'item_activity']),
+  table: z.enum(['products', 'categories', 'vendors', 'locations', 'inventory_levels']),
   operation: z.enum(['create', 'update', 'delete']),
   data: z.record(z.any()),
   client_timestamp: z.string(),
