@@ -45,7 +45,11 @@ router.post('/push', async (req, res) => {
     const errors: any[] = [];
     
     for (const change of changes) {
+      const savepointName = `sp_${change.local_id.replace(/[^a-zA-Z0-9]/g, '_')}`;
       try {
+        // Create savepoint for this change
+        await client.query(`SAVEPOINT ${savepointName}`);
+        
         // Check for conflicts (server has newer version)
         const existingResult = await client.query(
           `SELECT sync_version, updated_at FROM ${change.table} WHERE local_id = $1`,
@@ -109,7 +113,12 @@ router.post('/push', async (req, res) => {
           table: change.table,
           status: change.operation + 'd',
         });
+        
+        // Release savepoint on success
+        await client.query(`RELEASE SAVEPOINT ${savepointName}`);
       } catch (err) {
+        // Rollback to savepoint on error
+        await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
         console.error('Sync error for change:', change.local_id, err);
         errors.push({
           local_id: change.local_id,
