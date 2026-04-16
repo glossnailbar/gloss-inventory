@@ -62,6 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         const levels = await getAllFromStore<InventoryLevel>(STORES.inventory_levels);
         const uniqueLocationIds = [...new Set(levels.map(l => l.location_id))];
         
+        console.log('[Sidebar] Inventory levels:', levels.length, 'Unique locations:', uniqueLocationIds);
+        
         // Create location info from IDs
         // Try to get human-readable names from locations store first
         const locationInfos: LocationInfo[] = [];
@@ -75,6 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const { STORES } = await import('../../db/schema');
             const { getFromStore } = await import('../../db/database');
             const location = await getFromStore<{ name: string }>(STORES.locations, id);
+            console.log('[Sidebar] Looked up location', id, ':', location);
             if (location?.name) {
               name = location.name;
             }
