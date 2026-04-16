@@ -17,6 +17,7 @@ import { AddProductModal } from './components/AddProductModal/AddProductModal';
 import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { LocationManager } from './components/Locations/LocationManager';
+import { OrganizationManager } from './components/Organization/OrganizationManager';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
@@ -69,6 +70,7 @@ export const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
+  const [isOrganizationManagerOpen, setIsOrganizationManagerOpen] = useState(false);
 
   // Initialize database on mount
   useEffect(() => {
@@ -270,13 +272,15 @@ export const App: React.FC = () => {
         </svg>
       </button>
 
-      {/* Logout Button */}
+      {/* Logout Button - positioned below sync bar */}
       <button
         onClick={() => {
           clearAuthToken();
           setIsLoggedIn(false);
         }}
-        className="fixed top-4 right-4 z-30 px-3 py-2 bg-white rounded-lg shadow-md text-sm text-gray-600 hover:text-rose-600 hover:bg-rose-50"
+        className={`fixed right-4 z-30 px-3 py-2 bg-white rounded-lg shadow-md text-sm text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all ${
+          !isOnline || syncStatus.isSyncing || syncStatus.pendingCount > 0 ? 'top-12' : 'top-4'
+        }`}
       >
         Logout
       </button>
@@ -297,6 +301,8 @@ export const App: React.FC = () => {
             }}
             onViewAll={handleViewAll}
             onManageLocations={() => setIsLocationManagerOpen(true)}
+            onManageOrganization={() => setIsOrganizationManagerOpen(true)}
+            onInviteMembers={() => setIsOrganizationManagerOpen(true)}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
           />
@@ -469,6 +475,12 @@ export const App: React.FC = () => {
           // Trigger a refresh - the sidebar will reload locations
           window.location.reload();
         }}
+      />
+
+      {/* Organization Manager Modal */}
+      <OrganizationManager
+        isOpen={isOrganizationManagerOpen}
+        onClose={() => setIsOrganizationManagerOpen(false)}
       />
     </div>
   );
