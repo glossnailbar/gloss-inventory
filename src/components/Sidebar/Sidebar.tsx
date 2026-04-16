@@ -56,41 +56,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadLocationsFromInventory = async () => {
+    const loadLocations = async () => {
       try {
-        // Get all inventory levels and extract unique location IDs
-        const levels = await getAllFromStore<InventoryLevel>(STORES.inventory_levels);
-        const uniqueLocationIds = [...new Set(levels.map(l => l.location_id))];
+        // Get all locations directly from store (same as useLocations hook)
+        const { STORES } = await import('../../db/schema');
+        const allLocations = await getAllFromStore<{ local_id: string; name: string }>(STORES.locations);
         
-        console.log('[Sidebar] Inventory levels:', levels.length, 'Unique locations:', uniqueLocationIds);
+        console.log('[Sidebar] Loaded locations:', allLocations.length, allLocations.map(l => l.name));
         
-        // Create location info from IDs
-        // Try to get human-readable names from locations store first
-        const locationInfos: LocationInfo[] = [];
-        
-        for (const id of uniqueLocationIds) {
-          // Default: use ID as name (capitalize first letter)
-          let name = id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, ' ');
-          
-          // Check if there's a Location record
-          try {
-            const { STORES } = await import('../../db/schema');
-            const { getFromStore } = await import('../../db/database');
-            const location = await getFromStore<{ name: string }>(STORES.locations, id);
-            console.log('[Sidebar] Looked up location', id, ':', location);
-            if (location?.name) {
-              name = location.name;
-            }
-          } catch (e) {
-            // No location record, use ID-based name
-          }
-          
-          locationInfos.push({
-            id,
-            name,
-            icon: getLocationIcon(name),
-          });
-        }
+        const locationInfos: LocationInfo[] = allLocations.map(loc => ({
+          id: loc.local_id,
+          name: loc.name,
+          icon: getLocationIcon(loc.name),
+        }));
         
         // Sort alphabetically
         locationInfos.sort((a, b) => a.name.localeCompare(b.name));
@@ -103,10 +81,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
     };
 
-    loadLocationsFromInventory();
+    loadLocations();
     
     // Refresh locations when storage changes
-    const handleStorage = () => loadLocationsFromInventory();
+    const handleStorage = () => loadLocations();
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
