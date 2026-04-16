@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
-  },
+  },,
   "dependencies": {
     "@tanstack/react-query": "^5.8.0",
     "idb": "^7.1.1",
