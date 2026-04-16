@@ -25,6 +25,7 @@ import { ProductWithInventory, getProductWithInventory } from './db/operations/p
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
 import { isAuthenticated, clearAuthToken, getAuthToken } from './api/auth';
+import { useSync } from './hooks/useSync';
 
 // Demo organization ID for testing
 const DEMO_ORG_ID = 'demo-gloss-heights';
@@ -73,6 +74,18 @@ export const App: React.FC = () => {
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
   const [isOrganizationManagerOpen, setIsOrganizationManagerOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
+
+  // Use sync hook
+  const { sync, isSyncing, pendingCount } = useSync(DEMO_ORG_ID);
+
+  // Update syncStatus when hook changes
+  useEffect(() => {
+    setSyncStatus(prev => ({
+      ...prev,
+      isSyncing,
+      pendingCount,
+    }));
+  }, [isSyncing, pendingCount]);
 
   // Broadcast channel for service worker auth
   useEffect(() => {
@@ -287,7 +300,7 @@ export const App: React.FC = () => {
         {!isOnline ? 'Offline Mode' : syncStatus.isSyncing ? `Syncing ${syncStatus.pendingCount} items...` : 
          syncStatus.pendingCount > 0 ? (
           <span>{syncStatus.pendingCount} changes pending 
-            <button onClick={() => navigator.serviceWorker?.controller?.postMessage({ type: 'TRIGGER_SYNC' })} 
+            <button onClick={() => sync()} 
               className="ml-2 px-2 py-0.5 bg-white/20 rounded text-xs">Sync Now</button>
           </span>
         ) : null}
