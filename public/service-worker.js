@@ -59,6 +59,36 @@ self.addEventListener('sync', (event) => {
   }
 });
 
+// Get auth token from client
+async function getAuthTokenFromClient() {
+  const clients = await self.clients.matchAll({ type: 'window' });
+  if (clients.length === 0) return null;
+  
+  return new Promise((resolve) => {
+    const channel = new BroadcastChannel('gloss-auth');
+    channel.postMessage({ action: 'get-token' });
+    channel.onmessage = (event) => {
+      resolve(event.data.token);
+    };
+    setTimeout(() => resolve(null), 1000);
+  });
+}
+
+// Get organization ID from client
+async function getOrganizationIdFromClient() {
+  const clients = await self.clients.matchAll({ type: 'window' });
+  if (clients.length === 0) return null;
+  
+  return new Promise((resolve) => {
+    const channel = new BroadcastChannel('gloss-auth');
+    channel.postMessage({ action: 'get-org' });
+    channel.onmessage = (event) => {
+      resolve(event.data.orgId);
+    };
+    setTimeout(() => resolve(null), 1000);
+  });
+}
+
 async function processSyncQueue() {
   const db = await openDB('GlossInventory', 1);
   if (!db) {
@@ -67,6 +97,24 @@ async function processSyncQueue() {
   }
 
   try {
+    // Get auth token and org ID from client
+    const [authToken, orgId] = await Promise.all([
+      getAuthTokenFromClient(),
+      getOrganizationIdFromClient()
+    ]);
+
+    if (!authToken) {
+      console.error('[SW] No auth token available');
+      await notifyClients({ type: 'sync-error', error: 'Not authenticated' });
+      return;
+    }
+
+    if (!orgId) {
+      console.error('[SW] No organization ID available');
+      await notifyClients({ type: 'sync-error', error: 'No organization' });
+      return;
+    }
+
     const tx = db.transaction('sync_queue', 'readonly');
     const store = tx.objectStore('sync_queue');
     const index = store.index('by_status');
@@ -97,13 +145,16 @@ async function processSyncQueue() {
 
     console.log('[SW] Sending', changes.length, 'changes to', API_URL);
 
-    // Push to Railway API
+    // Push to Railway API with auth token
     const response = await fetch(`${API_URL}/api/sync/push`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
       body: JSON.stringify({
         device_id: deviceId,
-        organization_id: 'demo-gloss-heights',
+        organization_id: orgId,
         changes: changes
       })
     });

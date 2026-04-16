@@ -74,6 +74,35 @@ export const App: React.FC = () => {
   const [isOrganizationManagerOpen, setIsOrganizationManagerOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
 
+  // Broadcast channel for service worker auth
+  useEffect(() => {
+    if (!('BroadcastChannel' in window)) return;
+    
+    const channel = new BroadcastChannel('gloss-auth');
+    channel.onmessage = (event) => {
+      if (event.data.action === 'get-token') {
+        const token = getAuthToken();
+        channel.postMessage({ token });
+      }
+      if (event.data.action === 'get-org') {
+        // Get org from JWT or localStorage
+        const token = getAuthToken();
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            channel.postMessage({ orgId: payload.organizationId });
+          } catch {
+            channel.postMessage({ orgId: null });
+          }
+        } else {
+          channel.postMessage({ orgId: null });
+        }
+      }
+    };
+    
+    return () => channel.close();
+  }, []);
+
   // Initialize database on mount
   useEffect(() => {
     const init = async () => {
