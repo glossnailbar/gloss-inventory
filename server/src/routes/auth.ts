@@ -104,9 +104,9 @@ router.post('/signup', async (req, res) => {
         role: 'owner',
       },
     });
-  } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Failed to create account' });
+  } catch (error: any) {
+    console.error('Signup error:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to create account', details: error.message });
   }
 });
 
@@ -187,9 +187,9 @@ router.post('/login', async (req, res) => {
         role: org.role,
       },
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+  } catch (error: any) {
+    console.error('Login error:', error.message, error.stack);
+    res.status(500).json({ error: 'Login failed', details: error.message });
   }
 });
 
