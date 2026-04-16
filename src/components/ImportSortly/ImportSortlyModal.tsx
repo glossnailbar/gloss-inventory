@@ -258,6 +258,14 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
   const handleImport = () => {
     if (!parsedData) return;
     
+    console.log('[Import] handleImport called with:', {
+      products: parsedData.products.length,
+      categories: parsedData.categories.length,
+      vendors: parsedData.vendors.length,
+      locations: parsedData.locations.length,
+      locationList: parsedData.locations
+    });
+    
     onImport(parsedData.products, parsedData.categories, parsedData.vendors, parsedData.locations);
     onClose();
   };
