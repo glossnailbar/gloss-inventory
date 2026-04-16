@@ -332,4 +332,70 @@ router.put('/change-password', authenticateToken, async (req: any, res) => {
   }
 });
 
+// Get organization details with owner
+router.get('/organization', authenticateToken, async (req: any, res) => {
+  const db = pool;
+  const userId = req.user.userId;
+  const organizationId = req.user.organizationId;
+
+  try {
+    // Get organization
+    const orgResult = await db.query(
+      'SELECT id, name, created_at FROM organizations WHERE id = $1',
+      [organizationId]
+    );
+
+    if (orgResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    const organization = orgResult.rows[0];
+
+    // Get owner
+    const ownerResult = await db.query(
+      `SELECT u.email, u.first_name, u.last_name
+       FROM organization_members om
+       JOIN users u ON u.id = om.user_id
+       WHERE om.organization_id = $1 AND om.role = 'owner' AND om.is_active = true`,
+      [organizationId]
+    );
+
+    const owner = ownerResult.rows[0] || null;
+
+    // Get all members
+    const membersResult = await db.query(
+      `SELECT u.id, u.email, u.first_name, u.last_name, om.role, om.joined_at
+       FROM organization_members om
+       JOIN users u ON u.id = om.user_id
+       WHERE om.organization_id = $1 AND om.is_active = true
+       ORDER BY om.joined_at DESC`,
+      [organizationId]
+    );
+
+    res.json({
+      organization: {
+        id: organization.id,
+        name: organization.name,
+        createdAt: organization.created_at,
+      },
+      owner: owner ? {
+        email: owner.email,
+        firstName: owner.first_name,
+        lastName: owner.last_name,
+      } : null,
+      members: membersResult.rows.map((m: any) => ({
+        id: m.id,
+        email: m.email,
+        firstName: m.first_name,
+        lastName: m.last_name,
+        role: m.role,
+        joinedAt: m.joined_at,
+      })),
+    });
+  } catch (error: any) {
+    console.error('Get organization error:', error);
+    res.status(500).json({ error: 'Failed to get organization', details: error.message });
+  }
+});
+
 export default router;

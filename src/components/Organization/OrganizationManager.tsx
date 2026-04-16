@@ -27,11 +27,25 @@ interface Member {
   joinedAt: string;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface Owner {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
 export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
   isOpen,
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'members' | 'invite'>('members');
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [owner, setOwner] = useState<Owner | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,16 +57,46 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
   const [isInviting, setIsInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
-  // For now, show placeholder data since we need backend endpoints
+  // Fetch organization data
   useEffect(() => {
     if (isOpen) {
-      // TODO: Fetch members and invitations from API
-      setMembers([
-        { id: '1', email: 'owner@gloss.bar', firstName: 'Owner', lastName: 'User', role: 'owner', joinedAt: '2026-04-15' },
-      ]);
-      setInvitations([]);
+      fetchOrganizationData();
     }
   }, [isOpen]);
+
+  const fetchOrganizationData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/organization`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization data');
+      }
+
+      const data = await response.json();
+      setOrganization(data.organization);
+      setOwner(data.owner);
+      setMembers(data.members || []);
+      setInvitations([]); // TODO: fetch invitations when endpoint ready
+    } catch (err: any) {
+      setError(err.message);
+      // Fallback to placeholder if API fails
+      setOrganization({ id: '1', name: 'My Organization', createdAt: '2026-04-15' });
+      setOwner({ email: 'owner@example.com', firstName: 'Owner', lastName: 'User' });
+      setMembers([
+        { id: '1', email: 'owner@example.com', firstName: 'Owner', lastName: 'User', role: 'owner', joinedAt: '2026-04-15' },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +200,20 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
           <div className="p-6">
             {activeTab === 'members' ? (
               <div className="space-y-4">
+                {/* Organization Owner Info */}
+                {owner && (
+                  <div className="p-4 bg-rose-50 rounded-lg border border-rose-100">
+                    <h3 className="text-sm font-medium text-rose-900 mb-2">Organization Owner</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{owner.firstName} {owner.lastName}</p>
+                        <p className="text-sm text-gray-600">{owner.email}</p>
+                      </div>
+                      <span className="px-2 py-1 text-xs font-medium bg-rose-200 text-rose-800 rounded">Owner</span>
+                    </div>
+                  </div>
+                )}
+
                 <h3 className="text-sm font-medium text-gray-700">Current Members</h3>
                 {members.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">No members yet</p>
