@@ -50,8 +50,37 @@ const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
+
+// CORS - allow multiple origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://gloss-inventory.vercel.app',
+  'https://gloss-inventory-*.vercel.app',
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed?.includes('*')) {
+        // Handle wildcard patterns like https://gloss-inventory-*.vercel.app
+        const pattern = allowed.replace(/\*/g, '.*?');
+        return new RegExp(pattern).test(origin);
+      }
+      return allowed === origin || allowed === '*';
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
