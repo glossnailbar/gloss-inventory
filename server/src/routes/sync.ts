@@ -165,21 +165,48 @@ router.get('/pull', async (req, res) => {
     const result = await pool.query(`
       SELECT 'products' as table, id, local_id, sync_version as server_sequence, 
              name, sku, barcode, category_id, vendor_id, unit_of_measure,
-             reorder_point, reorder_quantity, is_retail, is_backbar, 
-             is_professional_only, image_url, deleted_at,
+             reorder_point, reorder_quantity, unit_cost, purchase_link, brand, origin,
+             tags, item_size, price_per, pcs_per_box, image_url, image_url2, image_url3,
+             is_active, deleted_at,
              'update' as operation
       FROM products 
       WHERE organization_id = $1 AND sync_version > $2
       
       UNION ALL
       
-      SELECT 'inventory_transactions' as table, id, local_id, 
-             sync_version as server_sequence,
-             product_id, variant_id, location_id, transaction_type, 
-             quantity, unit_cost, total_cost, reference_type, notes,
-             deleted_at,
-             'create' as operation
-      FROM inventory_transactions
+      SELECT 'categories' as table, id, local_id, sync_version as server_sequence,
+             name, description, parent_id, color, icon, sort_order, NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
+             'update' as operation
+      FROM categories
+      WHERE organization_id = $1 AND sync_version > $2
+      
+      UNION ALL
+      
+      SELECT 'vendors' as table, id, local_id, sync_version as server_sequence,
+             name, contact_name, email, phone, address, website, notes, NULL, NULL,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
+             'update' as operation
+      FROM vendors
+      WHERE organization_id = $1 AND sync_version > $2
+      
+      UNION ALL
+      
+      SELECT 'locations' as table, id, local_id, sync_version as server_sequence,
+             name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
+             'update' as operation
+      FROM locations
+      WHERE organization_id = $1 AND sync_version > $2
+      
+      UNION ALL
+      
+      SELECT 'inventory_levels' as table, id, local_id, sync_version as server_sequence,
+             CAST(product_id AS TEXT), CAST(location_id AS TEXT), CAST(quantity_on_hand AS TEXT), 
+             CAST(quantity_reserved AS TEXT), NULL, NULL, NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
+             'update' as operation
+      FROM inventory_levels
       WHERE organization_id = $1 AND sync_version > $2
       
       ORDER BY server_sequence
@@ -208,7 +235,7 @@ router.get('/pull', async (req, res) => {
     });
   } catch (err) {
     console.error('Pull failed:', err);
-    res.status(500).json({ error: 'Sync failed' });
+    res.status(500).json({ error: 'Sync failed', details: err instanceof Error ? err.message : String(err) });
   }
 });
 
