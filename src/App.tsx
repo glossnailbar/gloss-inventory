@@ -452,9 +452,12 @@ export const App: React.FC = () => {
             const { putToStore, STORES } = await import('./db/database');
             const locationMap = new Map<string, string>();
             
+            console.log('[Import] Creating', locations.length, 'locations:', locations);
+            
             for (const locationName of locations) {
               try {
                 const locationId = 'loc-' + Math.random().toString(36).slice(2, 11);
+                console.log('[Import] Creating location:', locationName, '->', locationId);
                 await putToStore(STORES.locations, {
                   id: locationId,
                   local_id: locationId,
@@ -467,6 +470,7 @@ export const App: React.FC = () => {
                   updated_at: new Date().toISOString(),
                 });
                 locationMap.set(locationName, locationId);
+                console.log('[Import] Location created:', locationName);
               } catch (err) {
                 console.error('Failed to create location:', locationName, err);
               }
