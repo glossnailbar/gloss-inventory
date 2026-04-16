@@ -134,7 +134,7 @@ router.post('/push', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Push failed:', err);
-    res.status(500).json({ error: 'Sync failed' });
+    res.status(500).json({ error: 'Sync failed', details: err instanceof Error ? err.message : String(err) });
   } finally {
     client.release();
   }
