@@ -11,5 +11,10 @@
   ],
   "env": {
     "VITE_API_URL": "https://gloss-inventory.up.railway.app"
+  },
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://gloss-inventory.up.railway.app"
+    }
   }
 }
