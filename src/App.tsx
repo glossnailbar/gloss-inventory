@@ -28,7 +28,7 @@ import { isAuthenticated, clearAuthToken, getAuthToken } from './api/auth';
 import { useSync } from './hooks/useSync';
 
 // Demo organization ID for testing
-const DEMO_ORG_ID = 'demo-gloss-heights';
+const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 // Parse current URL hash
 const parseHash = (): { view: string; itemId?: string; locationId?: string } => {
