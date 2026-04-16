@@ -5,8 +5,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getPendingCount } from '../db/sync-queue';
+import { getPendingCount, getPendingQueue } from '../db/sync-queue';
 import { checkHealth, pushChanges, pullChanges } from '../api/client';
+import { getAuthToken } from '../api/auth';
 
 export interface SyncStatus {
   isOnline: boolean;
@@ -54,16 +55,44 @@ export function useSync(organizationId: string) {
     setStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
 
     try {
-      // Trigger service worker sync
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' });
-      }
-
-      // Also try direct API sync as fallback
+      // Check connection first
       const isConnected = await checkConnection();
       if (!isConnected) {
         throw new Error('No connection to server');
       }
+
+      // Get pending changes
+      const pending = await getPendingQueue();
+      console.log('[Sync] Pending changes:', pending.length);
+
+      if (pending.length > 0) {
+        // Push changes directly via API
+        const deviceId = 'web-' + Math.random().toString(36).slice(2, 11);
+        
+        const changes = pending.map(item => ({
+          local_id: item.local_id,
+          table: item.table_name,
+          operation: item.operation,
+          data: item.payload,
+          client_timestamp: item.created_at,
+          client_version: item.sync_version || 1,
+        }));
+
+        console.log('[Sync] Pushing changes:', changes.length);
+        const result = await pushChanges(deviceId, organizationId, changes);
+        console.log('[Sync] Push result:', result);
+
+        // Remove synced items from queue
+        if (result?.accepted?.length > 0) {
+          console.log('[Sync] Removing', result.accepted.length, 'synced items');
+          // TODO: Remove from queue
+        }
+      }
+
+      // Pull changes from server
+      console.log('[Sync] Pulling changes from server...');
+      const pulled = await pullChanges(organizationId, 0);
+      console.log('[Sync] Pulled:', pulled);
 
       // Update last sync time
       setStatus((prev) => ({
@@ -72,14 +101,17 @@ export function useSync(organizationId: string) {
         lastSync: new Date().toISOString(),
         pendingCount: 0,
       }));
+      
+      console.log('[Sync] Complete!');
     } catch (err) {
+      console.error('[Sync] Error:', err);
       setStatus((prev) => ({
         ...prev,
         isSyncing: false,
         error: err instanceof Error ? err.message : 'Sync failed',
       }));
     }
-  }, [status.isSyncing, checkConnection]);
+  }, [status.isSyncing, checkConnection, organizationId]);
 
   // Listen for online/offline events
   useEffect(() => {
