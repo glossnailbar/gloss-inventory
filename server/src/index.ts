@@ -13,9 +13,6 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
-import { Pool } from 'pg';
-import fs from 'fs';
-import path from 'path';
 
 import { syncRouter } from './routes/sync';
 import { productsRouter } from './routes/products';
