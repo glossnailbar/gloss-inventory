@@ -34,7 +34,7 @@ export const authenticateToken = (req: any, res: any, next: any) => {
 
 // Sign up
 router.post('/signup', async (req, res) => {
-  const db: Pool = pool;
+  const db = pool;
   const { email, password, firstName, lastName, organizationName } = req.body;
 
   try {
@@ -112,7 +112,7 @@ router.post('/signup', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  const db: Pool = pool;
+  const db = pool;
   const { email, password } = req.body;
 
   try {
@@ -195,7 +195,7 @@ router.post('/login', async (req, res) => {
 
 // Get current user
 router.get('/me', authenticateToken, async (req: any, res) => {
-  const db: Pool = pool;
+  const db = pool;
   const userId = req.user.userId;
 
   try {
