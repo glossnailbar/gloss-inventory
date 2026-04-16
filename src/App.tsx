@@ -466,6 +466,10 @@ export const App: React.FC = () => {
             
             console.log('[Import] Creating', locations.length, 'locations:', locations);
             
+            if (locations.length === 0) {
+              console.warn('[Import] No locations to create!');
+            }
+            
             for (const locationName of locations) {
               try {
                 const locationId = 'loc-' + Math.random().toString(36).slice(2, 11);
