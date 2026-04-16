@@ -117,8 +117,8 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
         setPreview(jsonData);
         
         // Parse products, categories, and vendors
-        const { products, categories, vendors } = parseSortlyData(jsonData);
-        setParsedData({ products, categories, vendors });
+        const { products, categories, vendors, locations } = parseSortlyData(jsonData);
+        setParsedData({ products, categories, vendors, locations });
         
         setStep('preview');
       }
