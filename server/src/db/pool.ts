@@ -4,12 +4,16 @@
 
 import { Pool } from 'pg';
 
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
-console.log('NODE_ENV:', process.env.NODE_ENV);
+// Use environment variable or fallback to Railway public URL
+const connectionString = process.env.DATABASE_URL || 
+  'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway';
+
+console.log('DATABASE_URL env:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+console.log('Using connection:', connectionString.replace(/:([^@]+)@/, ':****@'));
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionString,
+  ssl: { rejectUnauthorized: false },
 });
 
 pool.on('error', (err) => {
