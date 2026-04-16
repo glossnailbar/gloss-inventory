@@ -4,6 +4,8 @@
  * Connects to Railway backend for sync operations.
  */
 
+import { getAuthToken } from './auth';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://gloss-inventory.up.railway.app';
 
 interface ApiResponse<T> {
@@ -16,12 +18,19 @@ async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options.headers as Record<string, string>,
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
