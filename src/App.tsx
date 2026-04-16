@@ -413,6 +413,16 @@ export const App: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImport={async (products, categories, vendors, locations) => {
+          const importLog = {
+            timestamp: new Date().toISOString(),
+            products: products.length,
+            categories: categories.length,
+            vendors: vendors.length,
+            locations: locations.length,
+            categoryNames: categories.map(c => c.name),
+            locationNames: locations
+          };
+          localStorage.setItem('last_import_log', JSON.stringify(importLog));
           console.log('Importing', products.length, 'products,', categories.length, 'categories,', vendors.length, 'vendors,', locations.length, 'locations');
           
           try {
@@ -431,6 +441,12 @@ export const App: React.FC = () => {
                 console.error('Failed to create category:', cat.name, err);
               }
             }
+            
+            console.log('[Import] Categories created:', categoryMap.size, 'Mapping:', Object.fromEntries(categoryMap));
+            localStorage.setItem('import_debug', JSON.stringify({
+              categoriesCreated: categoryMap.size,
+              categoryMapping: Object.fromEntries(categoryMap)
+            }));
             
             // Create vendors
             const { createVendor } = await import('./db/operations/vendors');
