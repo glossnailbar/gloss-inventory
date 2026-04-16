@@ -448,6 +448,30 @@ export const App: React.FC = () => {
               }
             }
             
+            // Create locations
+            const { putToStore, STORES } = await import('./db/database');
+            const locationMap = new Map<string, string>();
+            
+            for (const locationName of locations) {
+              try {
+                const locationId = 'loc-' + Math.random().toString(36).slice(2, 11);
+                await putToStore(STORES.locations, {
+                  id: locationId,
+                  local_id: locationId,
+                  organization_id: DEMO_ORG_ID,
+                  name: locationName,
+                  is_active: true,
+                  sync_status: 'pending',
+                  sync_version: 1,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+                locationMap.set(locationName, locationId);
+              } catch (err) {
+                console.error('Failed to create location:', locationName, err);
+              }
+            }
+            
             // Create products with location info
             const { createProduct } = await import('./db/operations/products');
             
@@ -459,7 +483,7 @@ export const App: React.FC = () => {
                 const vendorId = product.vendor ? vendorMap.get(product.vendor) : undefined;
                 
                 // Use Sortly location or default
-                const locationId = product.location || 'default';
+                const locationId = product.location ? locationMap.get(product.location) || 'default' : 'default';
                 
                 console.log('Creating product:', product.name, 'qty:', product.quantity, 'location:', locationId);
                 
