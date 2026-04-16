@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Locations from Categories</title>
+</head>
+<body>
+  <h1>Create Locations from Categories</h1>
+  <button id="createBtn">Create Locations</button>
+  <pre id="output"></pre>
+  
+  <script>
+    const DEMO_ORG_ID = '11111111-1111-1111-1111-111111111111';
+    
+    async function createLocations() {
+      const output = document.getElementById('output');
+      output.textContent = 'Opening database...\n';
+      
+      const req = indexedDB.open('GlossInventory', 1);
+      
+      req.onsuccess = async () => {
+        const db = req.result;
+        const tx = db.transaction(['categories', 'locations'], 'readwrite');
+        const catStore = tx.objectStore('categories');
+        const locStore = tx.objectStore('locations');
+        
+        const categories = await catStore.getAll();
+        output.textContent += `Found ${categories.length} categories\n`;
+        
+        const created = [];
+        for (const cat of categories) {
+          const locationId = 'loc-' + Math.random().toString(36).slice(2, 11);
+          const location = {
+            id: locationId,
+            local_id: locationId,
+            organization_id: DEMO_ORG_ID,
+            name: cat.name,
+            is_active: true,
+            sync_status: 'pending',
+            sync_version: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          await locStore.add(location);
+          created.push(cat.name);
+          output.textContent += `Created: ${cat.name}\n`;
+        }
+        
+        output.textContent += `\nDone! Created ${created.length} locations.\nRefresh the app to see them.`;
+      };
+      
+      req.onerror = () => {
+        output.textContent = 'Error opening database';
+      };
+    }
+    
+    document.getElementById('createBtn').addEventListener('click', createLocations);
+  </script>
+</body>
+</html>
