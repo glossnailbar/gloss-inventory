@@ -18,6 +18,7 @@ import { ImportSortlyModal } from './components/ImportSortly/ImportSortlyModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { LocationManager } from './components/Locations/LocationManager';
 import { OrganizationManager } from './components/Organization/OrganizationManager';
+import { UserProfile } from './components/Profile/UserProfile';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
@@ -71,6 +72,7 @@ export const App: React.FC = () => {
   const [initError, setInitError] = useState<string | null>(null);
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
   const [isOrganizationManagerOpen, setIsOrganizationManagerOpen] = useState(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
 
   // Initialize database on mount
   useEffect(() => {
@@ -303,6 +305,7 @@ export const App: React.FC = () => {
             onManageLocations={() => setIsLocationManagerOpen(true)}
             onManageOrganization={() => setIsOrganizationManagerOpen(true)}
             onInviteMembers={() => setIsOrganizationManagerOpen(true)}
+            onUserProfile={() => setIsUserProfileOpen(true)}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
           />
@@ -481,6 +484,12 @@ export const App: React.FC = () => {
       <OrganizationManager
         isOpen={isOrganizationManagerOpen}
         onClose={() => setIsOrganizationManagerOpen(false)}
+      />
+
+      {/* User Profile Modal */}
+      <UserProfile
+        isOpen={isUserProfileOpen}
+        onClose={() => setIsUserProfileOpen(false)}
       />
     </div>
   );

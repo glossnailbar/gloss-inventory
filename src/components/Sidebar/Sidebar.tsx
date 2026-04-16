@@ -18,6 +18,7 @@ export interface SidebarProps {
   onManageLocations?: () => void;
   onManageOrganization?: () => void;
   onInviteMembers?: () => void;
+  onUserProfile?: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onManageLocations,
   onManageOrganization,
   onInviteMembers,
+  onUserProfile,
   isOpen,
   onClose,
 }) => {
@@ -236,6 +238,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             Manage Locations
+          </button>
+          <button
+            onClick={() => {
+              onUserProfile?.();
+              onClose();
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            My Profile
           </button>
           <p className="text-xs text-gray-500 text-center">
             Gloss Inventory v1.0
