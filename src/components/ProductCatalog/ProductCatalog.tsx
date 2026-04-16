@@ -44,10 +44,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     let filtered = products;
 
     // Location filter
+    // Location filter (sidebar "locations" are actually categories)
     if (selectedLocation) {
-      filtered = filtered.filter((p) => 
-        p.inventory.some(inv => inv.location_id === selectedLocation)
-      );
+      filtered = filtered.filter((p) => p.category_id === selectedLocation);
     }
 
     // Category filter

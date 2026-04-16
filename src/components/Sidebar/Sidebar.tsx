@@ -62,17 +62,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         const { STORES } = await import('../../db/schema');
         let allLocations = await getAllFromStore<{ local_id: string; name: string }>(STORES.locations);
         
-        // Fallback: if no locations in store, extract from category names
+        // Fallback: if no locations in store, use categories as locations
         if (allLocations.length === 0) {
-          console.log('[Sidebar] No locations in store, extracting from categories...');
-          const categories = await getAllFromStore<{ name: string }>(STORES.categories);
+          console.log('[Sidebar] No locations in store, using categories...');
+          const categories = await getAllFromStore<{ local_id: string; name: string }>(STORES.categories);
           console.log('[Sidebar] Found categories:', categories.length, categories.map(c => c.name));
-          const categoryNames = [...new Set(categories.map(c => c.name).filter(Boolean))];
-          allLocations = categoryNames.map((name, i) => ({
-            local_id: `loc-${Date.now()}-${i}`,
-            name: name
+          // Use actual category IDs so filtering works
+          allLocations = categories.map(cat => ({
+            local_id: cat.local_id,
+            name: cat.name
           }));
-          console.log('[Sidebar] Extracted from categories:', allLocations);
+          console.log('[Sidebar] Using categories as locations:', allLocations);
         }
         
         console.log('[Sidebar] Loaded locations:', allLocations.length, allLocations.map(l => l.name));
