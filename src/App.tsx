@@ -443,12 +443,6 @@ export const App: React.FC = () => {
             }
             
             console.log('[Import] Categories created:', categoryMap.size, 'Mapping:', Object.fromEntries(categoryMap));
-            localStorage.setItem('import_debug', JSON.stringify({
-              categoriesCreated: categoryMap.size,
-              categoryMapping: Object.fromEntries(categoryMap),
-              locationsCreated: locationMap.size,
-              locationMapping: Object.fromEntries(locationMap)
-            }));
             
             // Create vendors
             const { createVendor } = await import('./db/operations/vendors');
@@ -495,6 +489,13 @@ export const App: React.FC = () => {
             }
             
             console.log('[Import] Locations created:', locationMap.size, 'Mapping:', Object.fromEntries(locationMap));
+            
+            localStorage.setItem('import_debug', JSON.stringify({
+              categoriesCreated: categoryMap.size,
+              categoryMapping: Object.fromEntries(categoryMap),
+              locationsCreated: locationMap.size,
+              locationMapping: Object.fromEntries(locationMap)
+            }));
             
             // Create products with location info
             const { createProduct } = await import('./db/operations/products');
