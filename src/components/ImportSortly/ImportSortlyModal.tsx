@@ -250,6 +250,8 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       };
     });
     
+    console.log('[Parse] First 3 products locations:', products.slice(0, 3).map(p => ({ name: p.name, location: p.location })));
+    
     return { products, categories, vendors, locations: Array.from(locationSet) };
   };
 
