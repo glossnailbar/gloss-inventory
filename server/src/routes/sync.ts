@@ -175,7 +175,7 @@ router.get('/pull', async (req, res) => {
       UNION ALL
       
       SELECT 'categories' as table, id, local_id, sync_version as server_sequence,
-             name, description, parent_id, color, icon, sort_order, NULL, NULL, NULL,
+             name, qbo_account_id, qbo_asset_account_id, is_active, NULL, NULL, NULL,
              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
              'update' as operation
       FROM categories
@@ -184,7 +184,8 @@ router.get('/pull', async (req, res) => {
       UNION ALL
       
       SELECT 'vendors' as table, id, local_id, sync_version as server_sequence,
-             name, contact_name, email, phone, address, website, notes, NULL, NULL,
+             name, contact_name, email, phone, address, payment_terms, 
+             CAST(lead_time_days AS TEXT), qbo_vendor_id, NULL, NULL,
              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
              'update' as operation
       FROM vendors
@@ -193,7 +194,7 @@ router.get('/pull', async (req, res) => {
       UNION ALL
       
       SELECT 'locations' as table, id, local_id, sync_version as server_sequence,
-             name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+             name, is_active, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, deleted_at,
              'update' as operation
       FROM locations
