@@ -69,23 +69,27 @@ export function useSync(organizationId: string) {
         // Push changes directly via API
         const deviceId = 'web-' + Math.random().toString(36).slice(2, 11);
         
-        const changes = pending.map(item => ({
-          local_id: item.local_id,
-          table: item.table_name,
-          operation: item.operation,
-          data: item.payload,
-          client_timestamp: item.created_at,
-          client_version: item.sync_version || 1,
-        }));
+        // Filter to only tables that exist on server
+        const validTables = ['products', 'categories', 'vendors', 'locations', 'inventory_levels'];
+        const validChanges = pending
+          .filter(item => validTables.includes(item.table_name))
+          .map(item => ({
+            local_id: item.local_id,
+            table: item.table_name,
+            operation: item.operation,
+            data: item.payload,
+            client_timestamp: item.created_at,
+            client_version: item.sync_version || 1,
+          }));
 
-        console.log('[Sync] Pushing changes:', changes.length);
-        const result = await pushChanges(deviceId, organizationId, changes);
-        console.log('[Sync] Push result:', result);
-
-        // Remove synced items from queue
-        if (result?.accepted?.length > 0) {
-          console.log('[Sync] Removing', result.accepted.length, 'synced items');
-          // TODO: Remove from queue
+        console.log('[Sync] Pending:', pending.length, 'Valid:', validChanges.length);
+        
+        if (validChanges.length === 0) {
+          console.log('[Sync] No valid changes to push');
+        } else {
+          console.log('[Sync] Pushing changes:', validChanges.length);
+          const result = await pushChanges(deviceId, organizationId, validChanges);
+          console.log('[Sync] Push result:', result);
         }
       }
 
