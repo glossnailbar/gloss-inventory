@@ -8,8 +8,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/pool';
+import { authenticateToken } from './auth';
 
 const router = Router();
+
+// Apply auth middleware to all sync routes
+router.use(authenticateToken);
 
 // Validation schemas
 const changeSchema = z.object({
