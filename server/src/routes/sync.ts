@@ -85,7 +85,9 @@ router.post('/push', async (req, res) => {
         
         // Resolve foreign key references (local_id -> server id)
         const foreignKeyColumns = ['category_id', 'vendor_id', 'location_id', 'product_id'];
+        let skipChange = false;
         for (const fkCol of foreignKeyColumns) {
+          if (skipChange) break;
           if (filteredData[fkCol] && typeof filteredData[fkCol] === 'string') {
             // Determine which table to look up
             let refTable = '';
@@ -95,11 +97,16 @@ router.post('/push', async (req, res) => {
             else if (fkCol === 'product_id') refTable = 'products';
             
             if (refTable) {
+              // For locations, lookup by name since client sends location name as location_id
+              const lookupColumn = fkCol === 'location_id' ? 'name' : 'local_id';
+              console.log(`[Sync] Resolving FK: ${fkCol}=${filteredData[fkCol]} using ${lookupColumn}`);
               const fkResult = await client.query(
-                `SELECT id FROM ${refTable} WHERE local_id = $1 AND organization_id = $2`,
+                `SELECT id FROM ${refTable} WHERE ${lookupColumn} = $1 AND organization_id = $2`,
                 [filteredData[fkCol], organization_id]
               );
+              console.log(`[Sync] FK lookup result: ${fkResult.rows.length} rows`);
               if (fkResult.rows.length > 0) {
+                console.log(`[Sync] Resolved ${fkCol} to ${fkResult.rows[0].id}`);
                 filteredData[fkCol] = fkResult.rows[0].id;
               } else {
                 // Foreign key not found - skip this change for now
@@ -108,11 +115,13 @@ router.post('/push', async (req, res) => {
                   local_id: change.local_id,
                   error: `Referenced ${fkCol} not yet synced`,
                 });
-                continue;
+                skipChange = true;
               }
             }
           }
         }
+        
+        if (skipChange) continue;
         
         if (change.operation === 'create') {
           const columns = Object.keys(filteredData);
