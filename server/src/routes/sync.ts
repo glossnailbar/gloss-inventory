@@ -227,8 +227,16 @@ router.get('/pull', async (req, res) => {
                jsonb_build_object(
                  'name', name, 'sku', sku, 'barcode', barcode, 'category_id', category_id,
                  'vendor_id', vendor_id, 'unit_of_measure', unit_of_measure, 'reorder_point', reorder_point,
-                 'reorder_quantity', reorder_quantity, 'unit_cost', unit_cost, 'purchase_link', purchase_link,
-                 'brand', brand, 'origin', origin, 'image_url', image_url, 'is_active', is_active
+                 'reorder_quantity', reorder_quantity, 'max_level', max_level, 'unit_cost', unit_cost,
+                 'purchase_link', purchase_link, 'brand', brand, 'origin', origin, 'tags', tags,
+                 'item_size', item_size, 'price_per', price_per, 'pcs_per_box', pcs_per_box,
+                 'attribute1_name', attribute1_name, 'attribute1_value', attribute1_value,
+                 'attribute2_name', attribute2_name, 'attribute2_value', attribute2_value,
+                 'attribute3_name', attribute3_name, 'attribute3_value', attribute3_value,
+                 'image_url', image_url, 'image_url2', image_url2, 'image_url3', image_url3,
+                 'is_retail', is_retail, 'is_backbar', is_backbar, 'is_professional_only', is_professional_only,
+                 'has_variants', has_variants, 'expiration_tracking', expiration_tracking,
+                 'description', description, 'is_active', is_active
                ) as data,
                deleted_at
         FROM products 
@@ -256,7 +264,7 @@ router.get('/pull', async (req, res) => {
         UNION ALL
         
         SELECT 'locations' as table_name, id, local_id, sync_version as server_sequence, created_at,
-               jsonb_build_object('name', name, 'is_active', is_active),
+               jsonb_build_object('name', name, 'local_id', local_id, 'is_active', is_active),
                deleted_at
         FROM locations
         WHERE organization_id = $1 AND sync_version > $2
