@@ -99,31 +99,38 @@ export function useSync(organizationId: string) {
         }
       }
 
-      // Pull changes from server
+      // Pull changes from server (with pagination)
       console.log('[Sync] Pulling changes from server...');
-      const pulled = await pullChanges(organizationId, 0);
-      console.log('[Sync] Pulled:', pulled);
+      let sequence = 0;
+      let hasMore = true;
+      let totalPulled = 0;
       
-      // Apply pulled changes to IndexedDB
-      if (pulled?.changes?.length > 0) {
-        console.log('[Sync] Applying', pulled.changes.length, 'changes to local DB...');
-        for (const change of pulled.changes) {
-          console.log('[Sync] Applying change:', change.table, change.local_id, change.operation);
-          try {
-            if (change.operation === 'delete') {
-              await deleteFromStore(change.table, change.local_id);
-            } else {
-              // Update or create
-              const record = { ...change.data, local_id: change.local_id, organization_id: organizationId };
-              console.log('[Sync] Putting record:', change.table, record);
-              await putToStore(change.table, record);
+      while (hasMore) {
+        const pulled = await pullChanges(organizationId, sequence);
+        console.log('[Sync] Pulled:', pulled.changes.length, 'changes, has_more:', pulled.has_more);
+        
+        // Apply pulled changes to IndexedDB
+        if (pulled?.changes?.length > 0) {
+          for (const change of pulled.changes) {
+            try {
+              if (change.operation === 'delete') {
+                await deleteFromStore(change.table, change.local_id);
+              } else {
+                const record = { ...change.data, local_id: change.local_id, organization_id: organizationId };
+                await putToStore(change.table, record);
+              }
+            } catch (err) {
+              console.error('[Sync] Error applying change:', change.table, change.local_id, err);
             }
-          } catch (err) {
-            console.error('[Sync] Error applying change:', change.table, change.local_id, err);
           }
+          totalPulled += pulled.changes.length;
         }
-        console.log('[Sync] Applied changes to local DB');
+        
+        sequence = pulled.new_sequence;
+        hasMore = pulled.has_more;
       }
+      
+      console.log('[Sync] Total pulled and applied:', totalPulled);
 
       // Update last sync time
       setStatus((prev) => ({
