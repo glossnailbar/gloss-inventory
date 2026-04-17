@@ -79,9 +79,40 @@ router.post('/push', async (req, res) => {
         
         // Filter out reserved columns that are managed by server
         const reservedColumns = ['id', 'local_id', 'organization_id', 'sync_version', 'created_at', 'updated_at', 'deleted_at'];
-        const filteredData = Object.fromEntries(
+        let filteredData = Object.fromEntries(
           Object.entries(change.data).filter(([key]) => !reservedColumns.includes(key))
         );
+        
+        // Resolve foreign key references (local_id -> server id)
+        const foreignKeyColumns = ['category_id', 'vendor_id', 'location_id', 'product_id'];
+        for (const fkCol of foreignKeyColumns) {
+          if (filteredData[fkCol] && typeof filteredData[fkCol] === 'string') {
+            // Determine which table to look up
+            let refTable = '';
+            if (fkCol === 'category_id') refTable = 'categories';
+            else if (fkCol === 'vendor_id') refTable = 'vendors';
+            else if (fkCol === 'location_id') refTable = 'locations';
+            else if (fkCol === 'product_id') refTable = 'products';
+            
+            if (refTable) {
+              const fkResult = await client.query(
+                `SELECT id FROM ${refTable} WHERE local_id = $1 AND organization_id = $2`,
+                [filteredData[fkCol], organization_id]
+              );
+              if (fkResult.rows.length > 0) {
+                filteredData[fkCol] = fkResult.rows[0].id;
+              } else {
+                // Foreign key not found - skip this change for now
+                console.log(`Foreign key ${fkCol}=${filteredData[fkCol]} not found, deferring change`);
+                errors.push({
+                  local_id: change.local_id,
+                  error: `Referenced ${fkCol} not yet synced`,
+                });
+                continue;
+              }
+            }
+          }
+        }
         
         if (change.operation === 'create') {
           const columns = Object.keys(filteredData);
