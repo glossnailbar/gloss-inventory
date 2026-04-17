@@ -86,23 +86,38 @@ router.post('/push', async (req, res) => {
         if (change.operation === 'create') {
           const columns = Object.keys(filteredData);
           const values = Object.values(filteredData);
-          const placeholders = values.map((_, i) => `$${i + 2}`).join(', ');
+          
+          // Build query dynamically
+          const columnList = ['id', 'local_id', 'organization_id', ...columns, 'sync_version', 'created_at', 'updated_at'];
+          const paramList = ['gen_random_uuid()', '$1', '$2', ...values.map((_, i) => `$${i + 3}`), `$${values.length + 3}`];
+          
+          const query = `INSERT INTO ${change.table} (${columnList.join(', ')})
+             VALUES (${paramList.join(', ')}, NOW(), NOW())
+             RETURNING id`;
           
           result = await client.query(
-            `INSERT INTO ${change.table} (id, local_id, organization_id, ${columns.length > 0 ? columns.join(', ') + ', ' : ''}sync_version, created_at, updated_at)
-             VALUES (gen_random_uuid(), $1, $2, ${placeholders ? placeholders + ', ' : ''}$${values.length + 3}, NOW(), NOW())
-             RETURNING id`,
+            query,
             [change.local_id, organization_id, ...values, change.client_version]
           );
         } else if (change.operation === 'update') {
-          const updates = Object.keys(filteredData).map((key, i) => `${key} = $${i + 3}`).join(', ');
+          const columns = Object.keys(filteredData);
+          const values = Object.values(filteredData);
+          
+          // Build SET clause dynamically
+          let setClause;
+          if (columns.length > 0) {
+            const updates = columns.map((key, i) => `${key} = $${i + 3}`).join(', ');
+            setClause = `${updates}, sync_version = $${values.length + 3}`;
+          } else {
+            setClause = `sync_version = $3`;
+          }
           
           result = await client.query(
             `UPDATE ${change.table}
-             SET ${updates ? updates + ', ' : ''}sync_version = $${Object.keys(filteredData).length + 3}, updated_at = NOW()
+             SET ${setClause}, updated_at = NOW()
              WHERE local_id = $1 AND organization_id = $2
              RETURNING id`,
-            [change.local_id, organization_id, ...Object.values(filteredData), change.client_version]
+            [change.local_id, organization_id, ...values, change.client_version]
           );
         } else if (change.operation === 'delete') {
           result = await client.query(
