@@ -108,11 +108,18 @@ export function useSync(organizationId: string) {
       if (pulled?.changes?.length > 0) {
         console.log('[Sync] Applying', pulled.changes.length, 'changes to local DB...');
         for (const change of pulled.changes) {
-          if (change.operation === 'delete') {
-            await deleteFromStore(change.table, change.local_id);
-          } else {
-            // Update or create
-            await putToStore(change.table, { ...change.data, local_id: change.local_id, organization_id: organizationId });
+          console.log('[Sync] Applying change:', change.table, change.local_id, change.operation);
+          try {
+            if (change.operation === 'delete') {
+              await deleteFromStore(change.table, change.local_id);
+            } else {
+              // Update or create
+              const record = { ...change.data, local_id: change.local_id, organization_id: organizationId };
+              console.log('[Sync] Putting record:', change.table, record);
+              await putToStore(change.table, record);
+            }
+          } catch (err) {
+            console.error('[Sync] Error applying change:', change.table, change.local_id, err);
           }
         }
         console.log('[Sync] Applied changes to local DB');
