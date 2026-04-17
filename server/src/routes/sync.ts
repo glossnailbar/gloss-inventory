@@ -83,8 +83,6 @@ router.post('/push', async (req, res) => {
           Object.entries(change.data).filter(([key]) => !reservedColumns.includes(key))
         );
         
-        console.log(`[Sync] Data keys: ${Object.keys(filteredData).join(', ')}`);
-        
         // Resolve foreign key references (local_id -> server id)
         const foreignKeyColumns = ['category_id', 'vendor_id', 'location_id', 'product_id'];
         let skipChange = false;
@@ -101,14 +99,11 @@ router.post('/push', async (req, res) => {
             if (refTable) {
               // For locations, lookup by name since client sends location name as location_id
               const lookupColumn = fkCol === 'location_id' ? 'name' : 'local_id';
-              console.log(`[Sync] Resolving FK: ${fkCol}=${filteredData[fkCol]} using ${lookupColumn}`);
               const fkResult = await client.query(
                 `SELECT id FROM ${refTable} WHERE ${lookupColumn} = $1 AND organization_id = $2`,
                 [filteredData[fkCol], organization_id]
               );
-              console.log(`[Sync] FK lookup result: ${fkResult.rows.length} rows`);
               if (fkResult.rows.length > 0) {
-                console.log(`[Sync] Resolved ${fkCol} to ${fkResult.rows[0].id}`);
                 filteredData[fkCol] = fkResult.rows[0].id;
               } else {
                 // Foreign key not found - skip this change for now
