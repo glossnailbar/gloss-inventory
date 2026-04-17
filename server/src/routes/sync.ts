@@ -83,6 +83,8 @@ router.post('/push', async (req, res) => {
           Object.entries(change.data).filter(([key]) => !reservedColumns.includes(key))
         );
         
+        console.log(`[Sync] Data keys: ${Object.keys(filteredData).join(', ')}`);
+        
         // Resolve foreign key references (local_id -> server id)
         const foreignKeyColumns = ['category_id', 'vendor_id', 'location_id', 'product_id'];
         let skipChange = false;
