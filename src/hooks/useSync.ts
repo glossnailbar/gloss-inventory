@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getPendingCount, getPendingQueue } from '../db/sync-queue';
+import { putToStore, deleteFromStore } from '../db/database';
 import { checkHealth, pushChanges, pullChanges } from '../api/client';
 import { getAuthToken } from '../api/auth';
 
@@ -102,6 +103,20 @@ export function useSync(organizationId: string) {
       console.log('[Sync] Pulling changes from server...');
       const pulled = await pullChanges(organizationId, 0);
       console.log('[Sync] Pulled:', pulled);
+      
+      // Apply pulled changes to IndexedDB
+      if (pulled?.changes?.length > 0) {
+        console.log('[Sync] Applying', pulled.changes.length, 'changes to local DB...');
+        for (const change of pulled.changes) {
+          if (change.operation === 'delete') {
+            await deleteFromStore(change.table, change.local_id);
+          } else {
+            // Update or create
+            await putToStore(change.table, { ...change.data, local_id: change.local_id, organization_id: organizationId });
+          }
+        }
+        console.log('[Sync] Applied changes to local DB');
+      }
 
       // Update last sync time
       setStatus((prev) => ({
