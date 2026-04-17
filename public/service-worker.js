@@ -35,10 +35,10 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
 
-  // Don't cache API calls - let them go to network
-  if (url.pathname.startsWith('/api/')) {
-    return;
-  }
+  // Don't cache API calls or dev server files
+  if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/@')) return; // Vite dev files
+  if (url.pathname.includes('__openclaw')) return; // OpenClaw assets
 
   event.respondWith(cacheFirst(request));
 });
