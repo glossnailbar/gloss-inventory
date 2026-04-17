@@ -118,6 +118,9 @@ export function useSync(organizationId: string) {
               } else {
                 const record = { ...change.data, local_id: change.local_id, organization_id: organizationId };
                 await putToStore(change.table, record);
+                if (change.table === 'inventory_levels') {
+                  console.log('[Sync] Stored inventory level:', record.product_id, record.location_id, record.quantity_on_hand);
+                }
               }
             } catch (err) {
               console.error('[Sync] Error applying change:', change.table, change.local_id, err);
