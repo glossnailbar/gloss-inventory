@@ -295,10 +295,10 @@ export const App: React.FC = () => {
       <div className={`fixed top-0 left-0 right-0 z-50 px-4 py-2 text-sm font-medium text-center transition-colors ${
         !isOnline ? 'bg-amber-500 text-white' : 
         syncStatus.isSyncing ? 'bg-green-500 text-white' : 
-        syncStatus.pendingCount > 0 ? 'bg-blue-500 text-white' : 'hidden'
+        'bg-blue-500 text-white'
       }`}>
         {!isOnline ? 'Offline Mode' : syncStatus.isSyncing ? `Syncing ${syncStatus.pendingCount} items...` : 
-         syncStatus.pendingCount > 0 ? (
+         true ? (
           <span>{syncStatus.pendingCount} changes pending 
             <button onClick={() => sync()} 
               className="ml-2 px-2 py-0.5 bg-white/20 rounded text-xs">Sync Now</button>
