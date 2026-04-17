@@ -78,7 +78,7 @@ router.post('/push', async (req, res) => {
         let result;
         
         // Filter out reserved columns that are managed by server
-        const reservedColumns = ['id', 'local_id', 'sync_version', 'created_at', 'updated_at', 'deleted_at'];
+        const reservedColumns = ['id', 'local_id', 'organization_id', 'sync_version', 'created_at', 'updated_at', 'deleted_at'];
         const filteredData = Object.fromEntries(
           Object.entries(change.data).filter(([key]) => !reservedColumns.includes(key))
         );
