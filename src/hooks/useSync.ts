@@ -90,6 +90,11 @@ export function useSync(organizationId: string) {
           console.log('[Sync] Pushing changes:', validChanges.length);
           const result = await pushChanges(deviceId, organizationId, validChanges);
           console.log('[Sync] Push result:', result);
+          
+          // Log errors if any
+          if (result.errors?.length > 0) {
+            console.error('[Sync] Push errors:', result.errors.slice(0, 5));
+          }
         }
       }
 
