@@ -76,26 +76,33 @@ router.post('/push', async (req, res) => {
         
         // Apply the change
         let result;
+        
+        // Filter out reserved columns that are managed by server
+        const reservedColumns = ['id', 'local_id', 'sync_version', 'created_at', 'updated_at', 'deleted_at'];
+        const filteredData = Object.fromEntries(
+          Object.entries(change.data).filter(([key]) => !reservedColumns.includes(key))
+        );
+        
         if (change.operation === 'create') {
-          const columns = Object.keys(change.data);
-          const values = Object.values(change.data);
-          const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+          const columns = Object.keys(filteredData);
+          const values = Object.values(filteredData);
+          const placeholders = values.map((_, i) => `$${i + 2}`).join(', ');
           
           result = await client.query(
-            `INSERT INTO ${change.table} (id, local_id, ${columns.join(', ')}, sync_version, created_at, updated_at)
-             VALUES (gen_random_uuid(), $1, ${placeholders}, $${values.length + 1}, NOW(), NOW())
+            `INSERT INTO ${change.table} (id, local_id, organization_id, ${columns.length > 0 ? columns.join(', ') + ', ' : ''}sync_version, created_at, updated_at)
+             VALUES (gen_random_uuid(), $1, $2, ${placeholders ? placeholders + ', ' : ''}$${values.length + 3}, NOW(), NOW())
              RETURNING id`,
-            [change.local_id, ...values, change.client_version]
+            [change.local_id, organization_id, ...values, change.client_version]
           );
         } else if (change.operation === 'update') {
-          const updates = Object.keys(change.data).map((key, i) => `${key} = $${i + 3}`).join(', ');
+          const updates = Object.keys(filteredData).map((key, i) => `${key} = $${i + 3}`).join(', ');
           
           result = await client.query(
             `UPDATE ${change.table}
-             SET ${updates}, sync_version = $${Object.keys(change.data).length + 3}, updated_at = NOW()
+             SET ${updates ? updates + ', ' : ''}sync_version = $${Object.keys(filteredData).length + 3}, updated_at = NOW()
              WHERE local_id = $1 AND organization_id = $2
              RETURNING id`,
-            [change.local_id, organization_id, ...Object.values(change.data), change.client_version]
+            [change.local_id, organization_id, ...Object.values(filteredData), change.client_version]
           );
         } else if (change.operation === 'delete') {
           result = await client.query(
