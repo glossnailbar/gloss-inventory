@@ -68,10 +68,10 @@ export async function pushChanges(
 
 export async function pullChanges(
   organizationId: string,
-  since: number
+  offset: number
 ): Promise<any> {
   const { data, error } = await fetchApi(
-    `/api/sync/pull?org=${organizationId}&since=${since}`
+    `/api/sync/pull?org=${organizationId}&offset=${offset}`
   );
   
   if (error) throw new Error(error);

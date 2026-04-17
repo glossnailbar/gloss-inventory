@@ -212,6 +212,7 @@ router.post('/push', async (req, res) => {
 router.get('/pull', async (req, res) => {
   try {
     const since = parseInt(req.query.since as string) || 0;
+    const offset = parseInt(req.query.offset as string) || 0;
     const organization_id = req.query.org as string;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
     
@@ -219,58 +220,59 @@ router.get('/pull', async (req, res) => {
       return res.status(400).json({ error: 'organization_id required' });
     }
     
-    // Query for changes across all tables since sequence
+    // Query for changes across all tables since sequence with pagination
     const result = await pool.query(`
-      SELECT 'products' as table_name, id, local_id, sync_version as server_sequence, 
-             jsonb_build_object(
-               'name', name, 'sku', sku, 'barcode', barcode, 'category_id', category_id,
-               'vendor_id', vendor_id, 'unit_of_measure', unit_of_measure, 'reorder_point', reorder_point,
-               'reorder_quantity', reorder_quantity, 'unit_cost', unit_cost, 'purchase_link', purchase_link,
-               'brand', brand, 'origin', origin, 'image_url', image_url, 'is_active', is_active
-             ) as data,
-             deleted_at
-      FROM products 
-      WHERE organization_id = $1 AND sync_version > $2
-      
-      UNION ALL
-      
-      SELECT 'categories' as table_name, id, local_id, sync_version as server_sequence,
-             jsonb_build_object('name', name, 'qbo_account_id', qbo_account_id, 
-               'qbo_asset_account_id', qbo_asset_account_id, 'is_active', is_active),
-             deleted_at
-      FROM categories
-      WHERE organization_id = $1 AND sync_version > $2
-      
-      UNION ALL
-      
-      SELECT 'vendors' as table_name, id, local_id, sync_version as server_sequence,
-             jsonb_build_object('name', name, 'contact_name', contact_name, 'email', email,
-               'phone', phone, 'address', address, 'payment_terms', payment_terms,
-               'lead_time_days', lead_time_days, 'qbo_vendor_id', qbo_vendor_id),
-             deleted_at
-      FROM vendors
-      WHERE organization_id = $1 AND sync_version > $2
-      
-      UNION ALL
-      
-      SELECT 'locations' as table_name, id, local_id, sync_version as server_sequence,
-             jsonb_build_object('name', name, 'is_active', is_active),
-             deleted_at
-      FROM locations
-      WHERE organization_id = $1 AND sync_version > $2
-      
-      UNION ALL
-      
-      SELECT 'inventory_levels' as table_name, id, local_id, sync_version as server_sequence,
-             jsonb_build_object('product_id', product_id, 'location_id', location_id,
-               'quantity_on_hand', quantity_on_hand, 'quantity_reserved', quantity_reserved),
-             deleted_at
-      FROM inventory_levels
-      WHERE organization_id = $1 AND sync_version > $2
-      
-      ORDER BY server_sequence
-      LIMIT $3
-    `, [organization_id, since, limit]);
+      SELECT * FROM (
+        SELECT 'products' as table_name, id, local_id, sync_version as server_sequence, created_at,
+               jsonb_build_object(
+                 'name', name, 'sku', sku, 'barcode', barcode, 'category_id', category_id,
+                 'vendor_id', vendor_id, 'unit_of_measure', unit_of_measure, 'reorder_point', reorder_point,
+                 'reorder_quantity', reorder_quantity, 'unit_cost', unit_cost, 'purchase_link', purchase_link,
+                 'brand', brand, 'origin', origin, 'image_url', image_url, 'is_active', is_active
+               ) as data,
+               deleted_at
+        FROM products 
+        WHERE organization_id = $1 AND sync_version > $2
+        
+        UNION ALL
+        
+        SELECT 'categories' as table_name, id, local_id, sync_version as server_sequence, created_at,
+               jsonb_build_object('name', name, 'qbo_account_id', qbo_account_id, 
+                 'qbo_asset_account_id', qbo_asset_account_id, 'is_active', is_active),
+               deleted_at
+        FROM categories
+        WHERE organization_id = $1 AND sync_version > $2
+        
+        UNION ALL
+        
+        SELECT 'vendors' as table_name, id, local_id, sync_version as server_sequence, created_at,
+               jsonb_build_object('name', name, 'contact_name', contact_name, 'email', email,
+                 'phone', phone, 'address', address, 'payment_terms', payment_terms,
+                 'lead_time_days', lead_time_days, 'qbo_vendor_id', qbo_vendor_id),
+               deleted_at
+        FROM vendors
+        WHERE organization_id = $1 AND sync_version > $2
+        
+        UNION ALL
+        
+        SELECT 'locations' as table_name, id, local_id, sync_version as server_sequence, created_at,
+               jsonb_build_object('name', name, 'is_active', is_active),
+               deleted_at
+        FROM locations
+        WHERE organization_id = $1 AND sync_version > $2
+        
+        UNION ALL
+        
+        SELECT 'inventory_levels' as table_name, id, local_id, sync_version as server_sequence, created_at,
+               jsonb_build_object('product_id', product_id, 'location_id', location_id,
+                 'quantity_on_hand', quantity_on_hand, 'quantity_reserved', quantity_reserved),
+               deleted_at
+        FROM inventory_levels
+        WHERE organization_id = $1 AND sync_version > $2
+      ) combined
+      ORDER BY server_sequence, created_at, local_id
+      LIMIT $3 OFFSET $4
+    `, [organization_id, since, limit, offset]);
     
     const changes = result.rows.map(row => ({
       table: row.table_name,
@@ -284,9 +286,8 @@ router.get('/pull', async (req, res) => {
     res.json({
       changes,
       has_more: changes.length === limit,
-      new_sequence: changes.length > 0 
-        ? Math.max(...changes.map(c => c.server_sequence)) 
-        : since,
+      new_sequence: since,
+      new_offset: offset + changes.length,
     });
   } catch (err) {
     console.error('Pull failed:', err);

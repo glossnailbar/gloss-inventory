@@ -101,12 +101,12 @@ export function useSync(organizationId: string) {
 
       // Pull changes from server (with pagination)
       console.log('[Sync] Pulling changes from server...');
-      let sequence = 0;
+      let offset = 0;
       let hasMore = true;
       let totalPulled = 0;
       
       while (hasMore) {
-        const pulled = await pullChanges(organizationId, sequence);
+        const pulled = await pullChanges(organizationId, offset);
         console.log('[Sync] Pulled:', pulled.changes.length, 'changes, has_more:', pulled.has_more);
         
         // Apply pulled changes to IndexedDB
@@ -126,7 +126,7 @@ export function useSync(organizationId: string) {
           totalPulled += pulled.changes.length;
         }
         
-        sequence = pulled.new_sequence;
+        offset = pulled.new_offset || offset + pulled.changes.length;
         hasMore = pulled.has_more;
       }
       
