@@ -114,9 +114,14 @@ export function useSync(organizationId: string) {
           for (const change of pulled.changes) {
             try {
               if (change.operation === 'delete') {
-                await deleteFromStore(change.table, change.local_id);
+                // inventory_levels uses 'id' as key, not 'local_id'
+                const key = change.table === 'inventory_levels' ? change.local_id : change.local_id;
+                await deleteFromStore(change.table, key);
               } else {
-                const record = { ...change.data, local_id: change.local_id, organization_id: organizationId };
+                // inventory_levels uses 'id' as key, not 'local_id'
+                const record = change.table === 'inventory_levels' 
+                  ? { ...change.data, id: change.local_id, organization_id: organizationId }
+                  : { ...change.data, local_id: change.local_id, organization_id: organizationId };
                 await putToStore(change.table, record);
                 if (change.table === 'inventory_levels') {
                   console.log('[Sync] Stored inventory level:', record.product_id, record.location_id, record.quantity_on_hand);
