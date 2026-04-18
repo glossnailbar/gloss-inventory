@@ -111,6 +111,7 @@ export function useSync(organizationId: string) {
         
         // Apply pulled changes to IndexedDB
         if (pulled?.changes?.length > 0) {
+          let inventoryCount = 0;
           for (const change of pulled.changes) {
             try {
               if (change.operation === 'delete') {
@@ -124,13 +125,20 @@ export function useSync(organizationId: string) {
                   : { ...change.data, local_id: change.local_id, organization_id: organizationId };
                 await putToStore(change.table, record);
                 if (change.table === 'inventory_levels') {
-                  console.log('[Sync] Stored inventory level:', record.product_id, record.location_id, record.quantity_on_hand);
+                  inventoryCount++;
+                  console.log('[Sync] Inventory level stored:', {
+                    id: record.id,
+                    product_id: record.product_id,
+                    location_id: record.location_id,
+                    qty: record.quantity_on_hand
+                  });
                 }
               }
             } catch (err) {
               console.error('[Sync] Error applying change:', change.table, change.local_id, err);
             }
           }
+          console.log('[Sync] Inventory levels this batch:', inventoryCount);
           totalPulled += pulled.changes.length;
         }
         
