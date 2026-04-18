@@ -99,3 +99,14 @@ export async function fetchCategories(organizationId: string): Promise<any> {
   if (error) throw new Error(error);
   return data;
 }
+
+// Setup inventory levels (one-time fix)
+export async function setupInventory(organizationId: string): Promise<{ success: boolean; created: number; message: string }> {
+  const { data, error } = await fetchApi('/api/sync/setup-inventory', {
+    method: 'POST',
+    body: JSON.stringify({ organization_id: organizationId }),
+  });
+  
+  if (error) throw new Error(error);
+  return data;
+}

@@ -306,4 +306,84 @@ router.get('/pull', async (req, res) => {
   }
 });
 
+// POST /api/sync/setup-inventory - One-time setup to create inventory_levels for all products
+router.post('/setup-inventory', async (req, res) => {
+  try {
+    const organization_id = req.body.organization_id;
+    
+    if (!organization_id) {
+      return res.status(400).json({ error: 'organization_id required' });
+    }
+
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Get or create a default location
+      let locationId = '00000000-0000-0000-0000-000000000001';
+      const locationCheck = await client.query(
+        'SELECT id FROM locations WHERE organization_id = $1 LIMIT 1',
+        [organization_id]
+      );
+      
+      if (locationCheck.rows.length === 0) {
+        // Create default location
+        await client.query(
+          `INSERT INTO locations (id, local_id, organization_id, name, is_active, sync_version, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, true, 1, NOW(), NOW())
+           ON CONFLICT (id) DO NOTHING`,
+          [locationId, 'default-loc-' + organization_id.slice(0, 8), organization_id, 'Main']
+        );
+      } else {
+        locationId = locationCheck.rows[0].id;
+      }
+      
+      // Create inventory_levels for all products that don't have them
+      const result = await client.query(
+        `INSERT INTO inventory_levels (
+          id, local_id, product_id, location_id,
+          quantity_on_hand, quantity_reserved, organization_id,
+          sync_version, created_at, updated_at
+        )
+        SELECT 
+          gen_random_uuid(),
+          gen_random_uuid()::text,
+          p.id,
+          $2,
+          0,
+          0,
+          p.organization_id,
+          1,
+          NOW(),
+          NOW()
+        FROM products p
+        WHERE p.organization_id = $1
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_levels il WHERE il.product_id = p.id
+          )
+        RETURNING id`,
+        [organization_id, locationId]
+      );
+      
+      await client.query('COMMIT');
+      
+      res.json({
+        success: true,
+        created: result.rows.length,
+        message: `Created ${result.rows.length} inventory levels for products without them`
+      });
+      
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Setup inventory failed:', err);
+    res.status(500).json({ error: 'Setup failed', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 export { router as syncRouter };

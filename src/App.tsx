@@ -26,6 +26,7 @@ import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
 import { isAuthenticated, clearAuthToken, getAuthToken } from './api/auth';
 import { useSync } from './hooks/useSync';
+import { setupInventory } from './api/client';
 
 // Demo organization ID for testing
 const DEMO_ORG_ID = '11111111-1111-1111-1111-111111111111';
@@ -74,6 +75,7 @@ export const App: React.FC = () => {
   const [isLocationManagerOpen, setIsLocationManagerOpen] = useState(false);
   const [isOrganizationManagerOpen, setIsOrganizationManagerOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
+  const [isSettingUpInventory, setIsSettingUpInventory] = useState(false);
 
   // Use sync hook
   const { sync, isSyncing, pendingCount } = useSync(DEMO_ORG_ID);
@@ -302,6 +304,24 @@ export const App: React.FC = () => {
           <span>{syncStatus.pendingCount} changes pending 
             <button onClick={() => sync()} 
               className="ml-2 px-2 py-0.5 bg-white/20 rounded text-xs">Sync Now</button>
+            <button 
+              onClick={async () => {
+                if (isSettingUpInventory) return;
+                setIsSettingUpInventory(true);
+                try {
+                  const result = await setupInventory(DEMO_ORG_ID);
+                  alert(`Setup complete! Created ${result.created} inventory levels. Now sync to pull them.`);
+                } catch (err) {
+                  alert('Setup failed: ' + (err instanceof Error ? err.message : String(err)));
+                } finally {
+                  setIsSettingUpInventory(false);
+                }
+              }}
+              disabled={isSettingUpInventory}
+              className="ml-2 px-2 py-0.5 bg-amber-500 text-white rounded text-xs disabled:opacity-50"
+            >
+              {isSettingUpInventory ? 'Setting up...' : 'Setup Inventory'}
+            </button>
           </span>
         ) : null}
       </div>
