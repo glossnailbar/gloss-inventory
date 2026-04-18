@@ -121,8 +121,9 @@ export async function createProduct(
   if (locationQuantities?.length) {
     console.log('[DB] Creating inventory levels for product:', localId, locationQuantities);
     for (const { location_id, quantity } of locationQuantities) {
+      const levelId = generateLocalId();
       const level: InventoryLevel = {
-        id: generateLocalId(),
+        id: levelId,
         product_id: localId,
         location_id,
         quantity_on_hand: quantity,
@@ -132,6 +133,14 @@ export async function createProduct(
       };
       await putToStore(STORES.inventory_levels, level);
       console.log('[DB] Created inventory level:', level);
+      
+      // Queue inventory level for sync
+      await queueCreate(STORES.inventory_levels, levelId, {
+        product_id: localId,
+        location_id,
+        quantity_on_hand: quantity,
+        quantity_reserved: 0,
+      });
     }
   } else {
     console.log('[DB] No inventory levels to create for product:', localId);
@@ -394,6 +403,7 @@ export async function getProductInventoryLevels(
 
 /**
  * Set inventory level (for counts, adjustments)
+ * Queues the change for sync
  */
 export async function setInventoryLevel(
   productId: string,
@@ -413,6 +423,12 @@ export async function setInventoryLevel(
       updated_at: now,
     };
     await putToStore(STORES.inventory_levels, updated);
+    
+    // Queue for sync - inventory_levels uses id as local_id
+    await queueUpdate(STORES.inventory_levels, updated.id, updated.id, 
+      { quantity_on_hand: quantity, quantity_reserved: updated.quantity_reserved }, 
+      1);
+    
     return updated;
   } else {
     const newLevel: InventoryLevel = {
@@ -427,12 +443,22 @@ export async function setInventoryLevel(
       updated_at: now,
     };
     await putToStore(STORES.inventory_levels, newLevel);
+    
+    // Queue for sync - inventory_levels uses id as local_id
+    await queueCreate(STORES.inventory_levels, newLevel.id, {
+      product_id: productId,
+      location_id: locationId,
+      quantity_on_hand: quantity,
+      quantity_reserved: 0,
+    });
+    
     return newLevel;
   }
 }
 
 /**
  * Adjust inventory level (add/subtract quantity)
+ * Queues the change for sync
  */
 export async function adjustInventoryLevel(
   productId: string,
@@ -453,9 +479,16 @@ export async function adjustInventoryLevel(
       updated_at: now,
     };
     await putToStore(STORES.inventory_levels, updated);
+    
+    // Queue for sync - inventory_levels uses id as local_id
+    await queueUpdate(STORES.inventory_levels, updated.id, updated.id, 
+      { quantity_on_hand: newQuantity, quantity_reserved: updated.quantity_reserved }, 
+      1);
+    
     return updated;
   } else {
-    return setInventoryLevel(productId, locationId, newQuantity, variantId);
+    const newLevel = await setInventoryLevel(productId, locationId, newQuantity, variantId);
+    return newLevel;
   }
 }
 

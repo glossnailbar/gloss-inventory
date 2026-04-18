@@ -8,6 +8,7 @@ import { getAllFromStore, putToStore, deleteFromStore } from '../../db/database'
 import { STORES, InventoryLevel } from '../../db/schema';
 import { generateLocalId } from '../../db/database';
 import { logActivity } from '../../db/operations/itemActivity';
+import { queueCreate, queueUpdate, queueDelete } from '../../db/sync-queue';
 
 export interface TransferInventoryProps {
   product: ProductWithInventory;
@@ -56,13 +57,20 @@ export const TransferInventory: React.FC<TransferInventoryProps> = ({
       if (newFromQuantity <= 0) {
         // Delete the inventory level record if it reaches 0
         await deleteFromStore(STORES.inventory_levels, fromLevel.id);
+        // Queue delete for sync
+        await queueDelete(STORES.inventory_levels, fromLevel.id, fromLevel.id);
       } else {
-        await putToStore(STORES.inventory_levels, {
+        const updatedFromLevel: InventoryLevel = {
           ...fromLevel,
           quantity_on_hand: newFromQuantity,
           updated_at: new Date().toISOString(),
           sync_status: 'pending',
-        });
+        };
+        await putToStore(STORES.inventory_levels, updatedFromLevel);
+        // Queue update for sync
+        await queueUpdate(STORES.inventory_levels, fromLevel.id, fromLevel.id, 
+          { quantity_on_hand: newFromQuantity, quantity_reserved: fromLevel.quantity_reserved }, 
+          1);
       }
 
       // Find or create to location
@@ -70,28 +78,40 @@ export const TransferInventory: React.FC<TransferInventoryProps> = ({
       
       if (toLevel) {
         // Update existing
-        await putToStore(STORES.inventory_levels, {
+        const newToQuantity = toLevel.quantity_on_hand + parseInt(quantity);
+        const updatedToLevel: InventoryLevel = {
           ...toLevel,
-          quantity_on_hand: toLevel.quantity_on_hand + parseInt(quantity),
+          quantity_on_hand: newToQuantity,
           updated_at: new Date().toISOString(),
           sync_status: 'pending',
-        });
+        };
+        await putToStore(STORES.inventory_levels, updatedToLevel);
+        // Queue update for sync
+        await queueUpdate(STORES.inventory_levels, toLevel.id, toLevel.id, 
+          { quantity_on_hand: newToQuantity, quantity_reserved: toLevel.quantity_reserved }, 
+          1);
       } else {
         // Create new level
+        const newLevelId = generateLocalId();
         const newLevel: InventoryLevel = {
-          id: generateLocalId(),
-          local_id: generateLocalId(),
+          id: newLevelId,
           product_id: product.local_id,
           location_id: toLocation,
           quantity_on_hand: parseInt(quantity),
-          quantity_allocated: 0,
-          quantity_available: parseInt(quantity),
+          quantity_reserved: 0,
           sync_status: 'pending',
-          sync_version: 1,
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
         await putToStore(STORES.inventory_levels, newLevel);
+        // Queue create for sync
+        await queueCreate(STORES.inventory_levels, newLevelId, {
+          product_id: product.local_id,
+          location_id: toLocation,
+          quantity_on_hand: parseInt(quantity),
+          quantity_reserved: 0,
+        });
+        // Set toLevel for activity logging
+        toLevel = newLevel;
       }
 
       // Log the transfer activities
