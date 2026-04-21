@@ -189,51 +189,53 @@ router.get('/pull', async (req, res) => {
         // Query for changes across all tables since sequence with pagination
         const result = await pool_1.pool.query(`
       SELECT * FROM (
-        SELECT 'products' as table_name, id, local_id, sync_version as server_sequence, created_at,
+        SELECT 'products' as table_name, p.id, COALESCE(p.local_id, p.id::text) as local_id, COALESCE(p.sync_version, 1) as server_sequence, p.created_at,
                jsonb_build_object(
-                 'name', name, 'sku', sku, 'barcode', barcode, 'category_id', category_id,
-                 'vendor_id', vendor_id, 'unit_of_measure', unit_of_measure, 'reorder_point', reorder_point,
-                 'reorder_quantity', reorder_quantity, 'max_level', max_level, 'unit_cost', unit_cost,
-                 'purchase_link', purchase_link, 'brand', brand, 'origin', origin, 'tags', tags,
-                 'item_size', item_size, 'price_per', price_per, 'pcs_per_box', pcs_per_box,
-                 'attribute1_name', attribute1_name, 'attribute1_value', attribute1_value,
-                 'attribute2_name', attribute2_name, 'attribute2_value', attribute2_value,
-                 'attribute3_name', attribute3_name, 'attribute3_value', attribute3_value,
-                 'image_url', image_url, 'image_url2', image_url2, 'image_url3', image_url3,
-                 'is_retail', is_retail, 'is_backbar', is_backbar, 'is_professional_only', is_professional_only,
-                 'has_variants', has_variants, 'expiration_tracking', expiration_tracking,
-                 'description', description, 'is_active', is_active
+                 'name', p.name, 'sku', p.sku, 'barcode', p.barcode, 'category_id', COALESCE(c.local_id, c.id::text),
+                 'vendor_id', COALESCE(v.local_id, v.id::text), 'unit_of_measure', p.unit_of_measure, 'reorder_point', p.reorder_point,
+                 'reorder_quantity', p.reorder_quantity, 'max_level', p.max_level, 'unit_cost', p.unit_cost,
+                 'purchase_link', p.purchase_link, 'brand', p.brand, 'origin', p.origin, 'tags', p.tags,
+                 'item_size', p.item_size, 'price_per', p.price_per, 'pcs_per_box', p.pcs_per_box,
+                 'attribute1_name', p.attribute1_name, 'attribute1_value', p.attribute1_value,
+                 'attribute2_name', p.attribute2_name, 'attribute2_value', p.attribute2_value,
+                 'attribute3_name', p.attribute3_name, 'attribute3_value', p.attribute3_value,
+                 'image_url', p.image_url, 'image_url2', p.image_url2, 'image_url3', p.image_url3,
+                 'is_retail', p.is_retail, 'is_backbar', p.is_backbar, 'is_professional_only', p.is_professional_only,
+                 'has_variants', p.has_variants, 'expiration_tracking', p.expiration_tracking,
+                 'description', p.description, 'is_active', p.is_active
                ) as data,
-               deleted_at
-        FROM products 
-        WHERE organization_id = $1 AND sync_version > $2
+               p.deleted_at
+        FROM products p
+        LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN vendors v ON v.id = p.vendor_id
+        WHERE p.organization_id = $1 AND (p.sync_version > $2 OR p.sync_version IS NULL OR p.sync_version = 0)
         
         UNION ALL
         
-        SELECT 'categories' as table_name, id, local_id, sync_version as server_sequence, created_at,
-               jsonb_build_object('name', name, 'qbo_account_id', qbo_account_id, 
-                 'qbo_asset_account_id', qbo_asset_account_id, 'is_active', is_active),
-               deleted_at
-        FROM categories
-        WHERE organization_id = $1 AND sync_version > $2
+        SELECT 'categories' as table_name, c.id, COALESCE(c.local_id, c.id::text) as local_id, COALESCE(c.sync_version, 1) as server_sequence, c.created_at,
+               jsonb_build_object('name', c.name, 'qbo_account_id', c.qbo_account_id, 
+                 'qbo_asset_account_id', c.qbo_asset_account_id, 'is_active', c.is_active),
+               c.deleted_at
+        FROM categories c
+        WHERE c.organization_id = $1 AND (c.sync_version > $2 OR c.sync_version IS NULL OR c.sync_version = 0)
         
         UNION ALL
         
-        SELECT 'vendors' as table_name, id, local_id, sync_version as server_sequence, created_at,
-               jsonb_build_object('name', name, 'contact_name', contact_name, 'email', email,
-                 'phone', phone, 'address', address, 'payment_terms', payment_terms,
-                 'lead_time_days', lead_time_days, 'qbo_vendor_id', qbo_vendor_id),
-               deleted_at
-        FROM vendors
-        WHERE organization_id = $1 AND sync_version > $2
+        SELECT 'vendors' as table_name, v.id, COALESCE(v.local_id, v.id::text) as local_id, COALESCE(v.sync_version, 1) as server_sequence, v.created_at,
+               jsonb_build_object('name', v.name, 'contact_name', v.contact_name, 'email', v.email,
+                 'phone', v.phone, 'address', v.address, 'payment_terms', v.payment_terms,
+                 'lead_time_days', v.lead_time_days, 'qbo_vendor_id', v.qbo_vendor_id),
+               v.deleted_at
+        FROM vendors v
+        WHERE v.organization_id = $1 AND (v.sync_version > $2 OR v.sync_version IS NULL OR v.sync_version = 0)
         
         UNION ALL
         
-        SELECT 'locations' as table_name, id, local_id, sync_version as server_sequence, created_at,
-               jsonb_build_object('name', name, 'local_id', local_id, 'is_active', is_active),
-               deleted_at
-        FROM locations
-        WHERE organization_id = $1 AND sync_version > $2
+        SELECT 'locations' as table_name, l.id, COALESCE(l.local_id, l.id::text) as local_id, COALESCE(l.sync_version, 1) as server_sequence, l.created_at,
+               jsonb_build_object('name', l.name, 'local_id', COALESCE(l.local_id, l.id::text), 'is_active', l.is_active),
+               l.deleted_at
+        FROM locations l
+        WHERE l.organization_id = $1 AND (l.sync_version > $2 OR l.sync_version IS NULL OR l.sync_version = 0)
         
         UNION ALL
         
