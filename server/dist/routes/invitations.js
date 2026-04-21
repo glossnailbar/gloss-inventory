@@ -83,7 +83,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '7 days')
        RETURNING id, email, role, token, expires_at, created_at`, [email.toLowerCase(), organizationId, invitedBy, role, token]);
         const invitation = result.rows[0];
-        const inviteUrl = `${process.env.CLIENT_URL || 'https://gloss-inventory.vercel.app'}/accept-invite?token=${token}`;
+        const inviteUrl = `${process.env.CLIENT_URL || 'https://gloss-inventory.vercel.app'}/#/accept-invite?token=${token}`;
         res.status(201).json({
             invitation: {
                 id: invitation.id,
