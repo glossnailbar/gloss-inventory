@@ -16,6 +16,8 @@ interface Invitation {
   role: string;
   invitedAt: string;
   acceptedAt: string | null;
+  expiresAt: string;
+  token: string;
 }
 
 interface Member {
@@ -62,8 +64,30 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchOrganizationData();
+      fetchInvitations();
     }
   }, [isOpen]);
+
+  const fetchInvitations = async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/invitations`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch invitations');
+        return;
+      }
+
+      const data = await response.json();
+      setInvitations(data.invitations || []);
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
+    }
+  };
 
   const fetchOrganizationData = async () => {
     setIsLoading(true);
@@ -85,7 +109,6 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
       setOrganization(data.organization);
       setOwner(data.owner);
       setMembers(data.members || []);
-      setInvitations([]); // TODO: fetch invitations when endpoint ready
     } catch (err: any) {
       setError(err.message);
       // Fallback to placeholder if API fails
@@ -96,6 +119,31 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
       ]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCopyInviteLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+  };
+
+  const handleCancelInvite = async (invitationId: string) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel invitation');
+      }
+
+      // Remove from local state
+      setInvitations(invitations.filter(inv => inv.id !== invitationId));
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -230,14 +278,59 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
                 {invitations.length > 0 && (
                   <>
                     <h3 className="text-sm font-medium text-gray-700 mt-6">Pending Invitations</h3>
-                    <div className="space-y-2 mt-2">
+                    <div className="space-y-3 mt-2">
                       {invitations.map((inv) => (
-                        <div key={inv.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-gray-900">{inv.email}</p>
-                            <p className="text-sm text-gray-500">Invited as {inv.role}</p>
+                        <div key={inv.id} className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-medium text-gray-900">{inv.email}</p>
+                              <p className="text-sm text-gray-500">Invited as {inv.role}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">Pending</span>
+                              <button
+                                onClick={() => handleCancelInvite(inv.id)}
+                                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 hover:bg-red-50 rounded transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                          <span className="text-xs text-amber-600">Pending</span>
+                          
+                          {/* Invite Link with Copy */}
+                          <div className="mt-2 pt-2 border-t border-amber-200">
+                            <p className="text-xs font-medium text-amber-800 mb-1">Invite Link:</p>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={`${import.meta.env.VITE_CLIENT_URL || 'https://gloss-inventory.vercel.app'}/#/accept-invite?token=${inv.token}`}
+                                readOnly
+                                className="flex-1 text-xs text-amber-700 bg-white border border-amber-200 rounded px-2 py-1 break-all"
+                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const url = `${import.meta.env.VITE_CLIENT_URL || 'https://gloss-inventory.vercel.app'}/#/accept-invite?token=${inv.token}`;
+                                  navigator.clipboard.writeText(url);
+                                  // Show copied feedback
+                                  const btn = document.getElementById(`copy-btn-${inv.id}`);
+                                  if (btn) {
+                                    const original = btn.innerText;
+                                    btn.innerText = 'Copied!';
+                                    setTimeout(() => btn.innerText = original, 2000);
+                                  }
+                                }}
+                                id={`copy-btn-${inv.id}`}
+                                className="px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded hover:bg-amber-700 transition-colors whitespace-nowrap"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <p className="text-xs text-amber-600 mt-1">
+                              Expires: {new Date(inv.expiresAt).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -291,9 +384,35 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
 
                 {inviteUrl && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm font-medium text-blue-800 mb-1">Invite Link:</p>
-                    <p className="text-xs text-blue-600 break-all">{inviteUrl}</p>
-                    <p className="text-xs text-blue-500 mt-1">Share this link with {inviteEmail}</p>
+                    <p className="text-sm font-medium text-blue-800 mb-2">Invite Link (copy and send to {inviteEmail}):</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={inviteUrl}
+                        readOnly
+                        className="flex-1 text-xs text-blue-600 bg-white border border-blue-200 rounded px-2 py-1.5 break-all"
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteUrl);
+                          const btn = document.getElementById('copy-invite-btn');
+                          if (btn) {
+                            const original = btn.innerText;
+                            btn.innerText = 'Copied!';
+                            setTimeout(() => btn.innerText = original, 2000);
+                          }
+                        }}
+                        id="copy-invite-btn"
+                        className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <p className="text-xs text-blue-500 mt-2">
+                      Share this link with {inviteEmail}. It expires in 7 days.
+                    </p>
                   </div>
                 )}
 

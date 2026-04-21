@@ -1,6 +1,19 @@
 const CACHE_NAME = 'gloss-inventory-v1';
 const SYNC_TAG = 'gloss-inventory-sync';
 
+// Build version - gets injected during build to bust cache
+// This will be replaced by the build script with the current timestamp
+const BUILD_VERSION = 'BUILD_TIMESTAMP_PLACEHOLDER';
+
+// If using a dynamic version, create a versioned cache name
+const getCacheName = () => {
+  // Check if BUILD_VERSION was replaced during build, otherwise use a default
+  const version = BUILD_VERSION.includes('BUILD_TIMESTAMP') ? new Date().toISOString().split('T')[0] : BUILD_VERSION;
+  return `${CACHE_NAME}-${version}`;
+};
+
+const CACHE_KEY = getCacheName();
+
 // API URL - change this to your Railway URL
 const API_URL = 'https://gloss-inventory.up.railway.app';
 
@@ -13,7 +26,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
-      .open(CACHE_NAME)
+      .open(CACHE_KEY)
       .then((cache) => cache.addAll(STATIC_ASSETS))
       .then(() => self.skipWaiting())
   );
@@ -23,7 +36,12 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((names) => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))))
+      .then((names) => Promise.all(
+        names.filter(n => n !== CACHE_KEY).map(n => {
+          console.log('[SW] Deleting old cache:', n);
+          return caches.delete(n);
+        })
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -40,16 +58,48 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/@')) return; // Vite dev files
   if (url.pathname.includes('__openclaw')) return; // OpenClaw assets
 
+  // For index.html, always network-first to get latest version
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // For other assets, cache-first
   event.respondWith(cacheFirst(request));
 });
 
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) {
-    fetch(request).then(r => { if (r.ok) caches.open(CACHE_NAME).then(c => c.put(request, r)); }).catch(() => {});
+    // Update cache in background
+    fetch(request)
+      .then(r => {
+        if (r.ok) {
+          caches.open(CACHE_KEY).then(c => c.put(request, r));
+        }
+      })
+      .catch(() => {});
     return cached;
   }
   return fetch(request);
+}
+
+async function networkFirst(request) {
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_KEY);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (err) {
+    // Fallback to cache
+    const cached = await caches.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw err;
+  }
 }
 
 // Background sync
@@ -63,7 +113,7 @@ self.addEventListener('sync', (event) => {
 async function getAuthTokenFromClient() {
   const clients = await self.clients.matchAll({ type: 'window' });
   if (clients.length === 0) return null;
-  
+
   return new Promise((resolve) => {
     const channel = new BroadcastChannel('gloss-auth');
     channel.postMessage({ action: 'get-token' });
@@ -78,7 +128,7 @@ async function getAuthTokenFromClient() {
 async function getOrganizationIdFromClient() {
   const clients = await self.clients.matchAll({ type: 'window' });
   if (clients.length === 0) return null;
-  
+
   return new Promise((resolve) => {
     const channel = new BroadcastChannel('gloss-auth');
     channel.postMessage({ action: 'get-org' });
@@ -148,7 +198,7 @@ async function processSyncQueue() {
     // Push to Railway API with auth token
     const response = await fetch(`${API_URL}/api/sync/push`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`
       },

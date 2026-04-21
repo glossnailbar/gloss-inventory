@@ -305,6 +305,9 @@ export const App: React.FC = () => {
     );
   }
 
+  // Determine what to show
+  const isItemPage = currentView === 'item' && selectedProduct;
+
   // Show auth screens if not logged in
   if (!isLoggedIn) {
     if (authView === 'login') {

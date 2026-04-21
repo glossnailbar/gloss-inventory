@@ -111,6 +111,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
         id: row.id,
         email: row.email,
         role: row.role,
+        token: row.token,
         invitedAt: row.created_at,
         expiresAt: row.expires_at,
         acceptedAt: row.accepted_at,
