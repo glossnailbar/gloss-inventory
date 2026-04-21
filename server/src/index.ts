@@ -57,6 +57,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://gloss-inventory.vercel.app',
   'https://gloss-inventory-*.vercel.app',
+  'https://*.vercel.app',
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
