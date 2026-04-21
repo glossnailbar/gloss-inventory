@@ -21,6 +21,7 @@ import { OrganizationManager } from './components/Organization/OrganizationManag
 import { UserProfile } from './components/Profile/UserProfile';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
+import { AcceptInvite } from './components/Auth/AcceptInvite';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
@@ -32,8 +33,18 @@ import { setupInventory } from './api/client';
 const DEMO_ORG_ID = '11111111-1111-1111-1111-111111111111';
 
 // Parse current URL hash
-const parseHash = (): { view: string; itemId?: string; locationId?: string } => {
+const parseHash = (): { view: string; itemId?: string; locationId?: string; inviteToken?: string } => {
   const hash = window.location.hash.slice(1) || '/';
+  
+  // Match /accept-invite?token=...
+  const inviteMatch = hash.match(/^\/accept-invite/);
+  if (inviteMatch) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      return { view: 'accept-invite', inviteToken: token };
+    }
+  }
   
   // Match /item/:id
   const itemMatch = hash.match(/^\/item\/(.*)$/);
@@ -60,6 +71,7 @@ export const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(isAuthenticated());
   const [authView, setAuthView] = useState<AuthView>('login');
   const [currentView, setCurrentView] = useState<string>('catalog');
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductWithInventory | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -144,8 +156,13 @@ export const App: React.FC = () => {
   // Handle URL hash changes
   useEffect(() => {
     const handleHashChange = async () => {
-      const { view, itemId, locationId } = parseHash();
+      const { view, itemId, locationId, inviteToken: token } = parseHash();
       setCurrentView(view);
+      
+      if (token) {
+        setInviteToken(token);
+        return;
+      }
       
       // Set selected location from URL if present
       if (locationId) {
@@ -270,8 +287,22 @@ export const App: React.FC = () => {
     );
   }
 
-  // Determine what to show
-  const isItemPage = currentView === 'item' && selectedProduct;
+  // Show accept invite page
+  if (currentView === 'accept-invite' && inviteToken) {
+    return (
+      <AcceptInvite
+        token={inviteToken}
+        onSuccess={() => {
+          setInviteToken(null);
+          window.location.hash = '#/login';
+        }}
+        onCancel={() => {
+          setInviteToken(null);
+          window.location.hash = '#/login';
+        }}
+      />
+    );
+  }
 
   // Show auth screens if not logged in
   if (!isLoggedIn) {

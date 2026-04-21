@@ -128,6 +128,37 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to list invitations', details: error.message });
     }
 });
+// Validate invitation token
+router.get('/validate', async (req, res) => {
+    const db = pool_1.pool;
+    const { token } = req.query;
+    if (!token || typeof token !== 'string') {
+        return res.status(400).json({ error: 'Token required' });
+    }
+    try {
+        const result = await db.query(`SELECT i.id, i.email, i.role, i.expires_at, i.accepted_at, o.name as organization_name
+       FROM invitations i
+       JOIN organizations o ON o.id = i.organization_id
+       WHERE i.token = $1 AND i.accepted_at IS NULL AND i.expires_at > NOW()`, [token]);
+        if (result.rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired invitation' });
+        }
+        const invitation = result.rows[0];
+        res.json({
+            invitation: {
+                id: invitation.id,
+                email: invitation.email,
+                role: invitation.role,
+                organizationName: invitation.organization_name,
+                expiresAt: invitation.expires_at,
+            },
+        });
+    }
+    catch (error) {
+        console.error('Validate invitation error:', error);
+        res.status(500).json({ error: 'Failed to validate invitation' });
+    }
+});
 // Accept invitation
 router.post('/accept', async (req, res) => {
     const db = pool_1.pool;
