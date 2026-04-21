@@ -271,7 +271,7 @@ router.get('/pull', async (req, res) => {
         
         UNION ALL
         
-        SELECT 'inventory_levels' as table_name, il.id, COALESCE(il.local_id, il.id::text) as local_id, il.sync_version as server_sequence, il.created_at,
+        SELECT 'inventory_levels' as table_name, il.id, COALESCE(il.local_id, il.id::text) as local_id, COALESCE(il.sync_version, 1) as server_sequence, il.created_at,
                jsonb_build_object('product_id', COALESCE(p.local_id, p.id::text), 'location_id', COALESCE(l.local_id, l.id::text),
                  'quantity_on_hand', il.quantity_on_hand, 'quantity_reserved', il.quantity_reserved,
                  'product_server_id', il.product_id, 'location_server_id', il.location_id),
@@ -279,7 +279,7 @@ router.get('/pull', async (req, res) => {
         FROM inventory_levels il
         JOIN products p ON p.id = il.product_id
         JOIN locations l ON l.id = il.location_id
-        WHERE il.organization_id = $1 AND il.sync_version > $2
+        WHERE il.organization_id = $1 AND (il.sync_version > $2 OR il.sync_version IS NULL OR il.sync_version = 0)
       ) combined
       ORDER BY server_sequence, created_at, local_id
       LIMIT $3 OFFSET $4
