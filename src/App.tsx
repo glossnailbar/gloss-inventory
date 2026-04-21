@@ -39,8 +39,9 @@ const parseHash = (): { view: string; itemId?: string; locationId?: string; invi
   // Match /accept-invite?token=...
   const inviteMatch = hash.match(/^\/accept-invite/);
   if (inviteMatch) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    // Parse token from hash query string (not window.location.search which is empty with hash routing)
+    const hashQueryMatch = hash.match(/[?&]token=([^&]*)/);
+    const token = hashQueryMatch ? hashQueryMatch[1] : null;
     if (token) {
       return { view: 'accept-invite', inviteToken: token };
     }
