@@ -1,10 +1,11 @@
+/dist/
+/dist
 # Dependencies
 node_modules/
 .pnp
 .pnp.js
 
 # Build outputs
-dist/
 build/
 *.tsbuildinfo
 
