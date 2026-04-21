@@ -19,6 +19,7 @@ import { productsRouter } from './routes/products';
 import { categoriesRouter } from './routes/categories';
 import authRouter from './routes/auth';
 import { indexRouter } from './routes/index';
+import invitationsRouter from './routes/invitations';
 
 dotenv.config();
 
@@ -105,6 +106,7 @@ app.use('/api/sync', syncRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/invitations', invitationsRouter);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

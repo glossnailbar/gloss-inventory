@@ -56,6 +56,7 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
   const [inviteRole, setInviteRole] = useState('staff');
   const [isInviting, setIsInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   // Fetch organization data
   useEffect(() => {
@@ -103,6 +104,7 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
     setIsInviting(true);
     setError(null);
     setInviteSuccess(false);
+    setInviteUrl(null);
 
     try {
       const token = getAuthToken();
@@ -115,32 +117,24 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
         body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Failed to send invitation');
       }
 
       setInviteSuccess(true);
-      setInviteEmail('');
+      setInviteUrl(data.inviteUrl || null);
       setInvitations([...invitations, {
-        id: Date.now().toString(),
+        id: data.invitation?.id || Date.now().toString(),
         email: inviteEmail,
         role: inviteRole,
         invitedAt: new Date().toISOString(),
         acceptedAt: null,
       }]);
+      setInviteEmail('');
     } catch (err: any) {
       setError(err.message);
-      // For now, show success even if API fails (not implemented yet)
-      setInviteSuccess(true);
-      setInvitations([...invitations, {
-        id: Date.now().toString(),
-        email: inviteEmail,
-        role: inviteRole,
-        invitedAt: new Date().toISOString(),
-        acceptedAt: null,
-      }]);
-      setInviteEmail('');
     } finally {
       setIsInviting(false);
     }
@@ -292,6 +286,14 @@ export const OrganizationManager: React.FC<OrganizationManagerProps> = ({
                 {inviteSuccess && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
                     Invitation sent successfully!
+                  </div>
+                )}
+
+                {inviteUrl && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm font-medium text-blue-800 mb-1">Invite Link:</p>
+                    <p className="text-xs text-blue-600 break-all">{inviteUrl}</p>
+                    <p className="text-xs text-blue-500 mt-1">Share this link with {inviteEmail}</p>
                   </div>
                 )}
 
