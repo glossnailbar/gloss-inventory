@@ -72,8 +72,8 @@ router.post('/', authenticateToken, async (req: any, res) => {
 
     const invitation = result.rows[0];
 
-    // TODO: Send email with invitation link
-    // For now, return the token in the response
+    const inviteUrl = `${process.env.CLIENT_URL || 'https://gloss-inventory.vercel.app'}/accept-invite?token=${token}`;
+
     res.status(201).json({
       invitation: {
         id: invitation.id,
@@ -82,7 +82,7 @@ router.post('/', authenticateToken, async (req: any, res) => {
         invitedAt: invitation.created_at,
         expiresAt: invitation.expires_at,
       },
-      inviteUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/accept-invite?token=${token}`,
+      inviteUrl,
     });
   } catch (error: any) {
     console.error('Create invitation error:', error);
