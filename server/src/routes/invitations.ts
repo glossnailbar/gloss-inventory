@@ -102,6 +102,7 @@ router.get('/', authenticateToken, async (req: any, res) => {
        FROM invitations i
        JOIN users u ON u.id = i.invited_by
        WHERE i.organization_id = $1
+         AND i.accepted_at IS NULL
        ORDER BY i.created_at DESC`,
       [organizationId]
     );
