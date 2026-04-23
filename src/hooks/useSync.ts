@@ -97,15 +97,16 @@ export function useSync(organizationId: string) {
             client_version: item.sync_version || 1,
           }));
 
+        // Log ALL changes
+        console.log('[Sync] All pending changes:', pending.map(p => ({ table: p.table_name, op: p.operation, local_id: p.local_id.substring(0,8) })));
+        
         // Log inventory level changes specifically
         const inventoryChanges = validChanges.filter(c => c.table === 'inventory_levels');
         if (inventoryChanges.length > 0) {
           console.log('[Sync] Inventory levels to push:', inventoryChanges.length);
-          console.log('[Sync] First inventory change:', {
-            local_id: inventoryChanges[0].local_id,
-            operation: inventoryChanges[0].operation,
-            data: inventoryChanges[0].data
-          });
+          console.log('[Sync] First inventory change data:', inventoryChanges[0].data);
+        } else {
+          console.log('[Sync] No inventory_levels in pending changes');
         }
 
         console.log('[Sync] Pending:', pending.length, 'Valid:', validChanges.length);
