@@ -179,7 +179,13 @@ export async function queueDelete(
  * Get all pending queue items
  */
 export async function getPendingQueue(): Promise<SyncQueueItem[]> {
-  return queryByIndex('sync_queue', 'by_status', 'pending');
+  const items = await queryByIndex('sync_queue', 'by_status', 'pending');
+  console.log('[SyncQueue] getPendingQueue returned:', items.length, 'items');
+  console.log('[SyncQueue] Items by table:', items.reduce((acc, item) => {
+    acc[item.table_name] = (acc[item.table_name] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>));
+  return items;
 }
 
 /**
