@@ -6,7 +6,7 @@
  */
 
 export const DB_NAME = 'GlossInventory';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 // Sync status for all records
 export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'error';
