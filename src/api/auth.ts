@@ -10,13 +10,27 @@ let authToken: string | null = localStorage.getItem('auth_token');
 export const setAuthToken = (token: string) => {
   authToken = token;
   localStorage.setItem('auth_token', token);
+  // Also store organization ID from JWT
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.organizationId) {
+      localStorage.setItem('organization_id', payload.organizationId);
+    }
+  } catch {
+    // Ignore JWT parse errors
+  }
 };
 
 export const getAuthToken = () => authToken;
 
+export const getOrganizationId = (): string | null => {
+  return localStorage.getItem('organization_id');
+};
+
 export const clearAuthToken = () => {
   authToken = null;
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('organization_id');
 };
 
 export const isAuthenticated = () => !!authToken;

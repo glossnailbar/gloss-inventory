@@ -67,6 +67,12 @@ export const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess, on
         throw new Error(data.error || 'Failed to accept invitation');
       }
 
+      // Store auth token if returned
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('organization_id', data.organization.id);
+      }
+
       setAccepted(true);
       setTimeout(onSuccess, 2000);
     } catch (err: any) {

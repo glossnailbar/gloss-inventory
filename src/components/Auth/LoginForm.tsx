@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login, setAuthToken } from '../../api/auth';
+import { login, setAuthToken, getOrganizationId } from '../../api/auth';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -20,7 +20,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToSignu
     try {
       const result = await login(email, password);
       setAuthToken(result.token);
-      onSuccess();
+      // Force page reload to pick up new organization ID
+      window.location.reload();
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

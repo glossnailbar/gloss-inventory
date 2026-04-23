@@ -401,6 +401,18 @@ export async function applyServerChanges(
             updated_at: new Date().toISOString(),
           };
           await putToStore(storeName, merged);
+        } else {
+          // Server provided local_id but record doesn't exist locally yet - CREATE it
+          const newRecord = {
+            ...data,
+            id: change.server_id,
+            local_id: localId,
+            sync_status: 'synced',
+            sync_version: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as StoreRecord;
+          await putToStore(storeName, newRecord);
         }
       } else {
         // Create new with server-provided local_id or generate

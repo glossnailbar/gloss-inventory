@@ -186,14 +186,16 @@ router.post('/accept', async (req, res) => {
 
     // Check if user already exists
     const existingUser = await db.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id, first_name, last_name, email FROM users WHERE email = $1',
       [invitation.email]
     );
 
     let userId;
+    let userData;
 
     if (existingUser.rows.length > 0) {
       userId = existingUser.rows[0].id;
+      userData = existingUser.rows[0];
     } else {
       // Create new user
       const bcrypt = await import('bcrypt');
@@ -202,11 +204,12 @@ router.post('/accept', async (req, res) => {
       const newUser = await db.query(
         `INSERT INTO users (email, password_hash, first_name, last_name)
          VALUES ($1, $2, $3, $4)
-         RETURNING id`,
+         RETURNING id, first_name, last_name, email`,
         [invitation.email, passwordHash, firstName, lastName]
       );
 
       userId = newUser.rows[0].id;
+      userData = newUser.rows[0];
     }
 
     // Add to organization
@@ -226,7 +229,41 @@ router.post('/accept', async (req, res) => {
       [invitation.id]
     );
 
-    res.json({ message: 'Invitation accepted successfully' });
+    // Generate JWT for the invited organization
+    const jwt = await import('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    const authToken = jwt.default.sign(
+      { 
+        userId: userId, 
+        email: userData.email,
+        organizationId: invitation.organization_id,
+        role: invitation.role
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Get organization name
+    const orgResult = await db.query(
+      'SELECT name FROM organizations WHERE id = $1',
+      [invitation.organization_id]
+    );
+
+    res.json({ 
+      message: 'Invitation accepted successfully',
+      token: authToken,
+      user: {
+        id: userId,
+        email: userData.email,
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+      },
+      organization: {
+        id: invitation.organization_id,
+        name: orgResult.rows[0]?.name || 'Organization',
+        role: invitation.role,
+      }
+    });
   } catch (error: any) {
     console.error('Accept invitation error:', error);
     res.status(500).json({ error: 'Failed to accept invitation', details: error.message });

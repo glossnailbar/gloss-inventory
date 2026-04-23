@@ -25,7 +25,7 @@ import { AcceptInvite } from './components/Auth/AcceptInvite';
 import { ProductWithInventory, getProductWithInventory } from './db/operations/products';
 import { scanBarcode } from './db/operations/barcode';
 import { initDatabase, getSyncState, deleteDatabase } from './db/database';
-import { isAuthenticated, clearAuthToken, getAuthToken } from './api/auth';
+import { isAuthenticated, clearAuthToken, getAuthToken, getOrganizationId } from './api/auth';
 import { useSync } from './hooks/useSync';
 import { setupInventory } from './api/client';
 
@@ -90,8 +90,11 @@ export const App: React.FC = () => {
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isSettingUpInventory, setIsSettingUpInventory] = useState(false);
 
+  // Get organization ID from auth (JWT token)
+  const organizationId = getOrganizationId() || DEMO_ORG_ID;
+
   // Use sync hook
-  const { sync, isSyncing, pendingCount } = useSync(DEMO_ORG_ID);
+  const { sync, isSyncing, pendingCount } = useSync(organizationId);
 
   // Update syncStatus when hook changes
   useEffect(() => {
@@ -253,7 +256,7 @@ export const App: React.FC = () => {
   }, []);
 
   const handleScanComplete = useCallback(async (barcode: string) => {
-    const result = await scanBarcode(DEMO_ORG_ID, barcode);
+    const result = await scanBarcode(organizationId, barcode);
     if (result) {
       window.location.hash = `#/item/${result.product.local_id}`;
     } else {
@@ -344,7 +347,7 @@ export const App: React.FC = () => {
                 if (isSettingUpInventory) return;
                 setIsSettingUpInventory(true);
                 try {
-                  const result = await setupInventory(DEMO_ORG_ID);
+                  const result = await setupInventory(organizationId);
                   alert(`Setup complete! Created ${result.created} inventory levels. Now sync to pull them.`);
                 } catch (err) {
                   alert('Setup failed: ' + (err instanceof Error ? err.message : String(err)));
@@ -427,7 +430,7 @@ export const App: React.FC = () => {
           ) : currentView === 'add' ? (
             <div className="p-4 md:p-6 lg:p-8">
               <AddProductModal
-                organizationId={DEMO_ORG_ID}
+                organizationId={organizationId}
                 onClose={() => window.location.hash = '#/'}
                 onSuccess={() => window.location.hash = '#/'}
               />
@@ -446,7 +449,7 @@ export const App: React.FC = () => {
               </div>
 
               <ProductCatalog
-                organizationId={DEMO_ORG_ID}
+                organizationId={organizationId}
                 selectedLocation={selectedLocation}
                 onProductSelect={handleProductSelect}
                 onScanBarcode={handleScanBarcode}
@@ -489,7 +492,7 @@ export const App: React.FC = () => {
               try {
                 const newCat = await createCategory({
                   name: cat.name,
-                  organization_id: DEMO_ORG_ID,
+                  organization_id: organizationId,
                 });
                 categoryMap.set(cat.name, newCat.local_id);
               } catch (err) {
@@ -507,7 +510,7 @@ export const App: React.FC = () => {
               try {
                 const newVendor = await createVendor({
                   name: vendor.name,
-                  organization_id: DEMO_ORG_ID,
+                  organization_id: organizationId,
                 });
                 vendorMap.set(vendor.name, newVendor.local_id);
               } catch (err) {
@@ -532,7 +535,7 @@ export const App: React.FC = () => {
                 await putToStore(STORES.locations, {
                   id: locationId,
                   local_id: locationId,
-                  organization_id: DEMO_ORG_ID,
+                  organization_id: organizationId,
                   name: locationName,
                   is_active: true,
                   sync_status: 'pending',
@@ -573,7 +576,7 @@ export const App: React.FC = () => {
                 
                 await createProduct({
                   name: product.name,
-                  organization_id: DEMO_ORG_ID,
+                  organization_id: organizationId,
                   category_id: categoryId,
                   vendor_id: vendorId,
                   description: product.description || undefined,
@@ -621,7 +624,7 @@ export const App: React.FC = () => {
 
       {/* Location Manager Modal */}
       <LocationManager
-        organizationId={DEMO_ORG_ID}
+        organizationId={organizationId}
         isOpen={isLocationManagerOpen}
         onClose={() => setIsLocationManagerOpen(false)}
         onLocationsUpdated={() => {
