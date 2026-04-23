@@ -109,7 +109,13 @@ export function useSync(organizationId: string) {
           console.log('[Sync] No inventory_levels in pending changes');
         }
 
-        console.log('[Sync] Pending:', pending.length, 'Valid:', validChanges.length);
+        // Sort changes: products first, then inventory_levels (dependency order)
+        const tableOrder = ['categories', 'vendors', 'locations', 'products', 'inventory_levels'];
+        validChanges.sort((a, b) => {
+          const aIndex = tableOrder.indexOf(a.table);
+          const bIndex = tableOrder.indexOf(b.table);
+          return aIndex - bIndex;
+        });
         
         if (validChanges.length === 0) {
           console.log('[Sync] No valid changes to push');
