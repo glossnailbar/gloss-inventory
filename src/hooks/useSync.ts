@@ -53,6 +53,7 @@ export function useSync(organizationId: string) {
   const sync = useCallback(async () => {
     if (status.isSyncing) return;
 
+    console.log('[Sync] Starting sync for organization:', organizationId);
     setStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
 
     try {
@@ -61,6 +62,10 @@ export function useSync(organizationId: string) {
       if (!isConnected) {
         throw new Error('No connection to server');
       }
+
+      // Verify auth token
+      const token = getAuthToken();
+      console.log('[Sync] Auth token present:', !!token);
 
       // Get pending changes
       const pending = await getPendingQueue();

@@ -71,10 +71,11 @@ export const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess, on
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('organization_id', data.organization.id);
+        // Force reload to pick up new organization
+        window.location.reload();
+      } else {
+        setTimeout(onSuccess, 2000);
       }
-
-      setAccepted(true);
-      setTimeout(onSuccess, 2000);
     } catch (err: any) {
       setError(err.message);
     } finally {

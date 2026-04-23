@@ -213,12 +213,15 @@ router.get('/pull', async (req, res) => {
   try {
     const since = parseInt(req.query.since as string) || 0;
     const offset = parseInt(req.query.offset as string) || 0;
-    const organization_id = req.query.org as string;
+    // Use organization from auth token as source of truth
+    const organization_id = req.user?.organizationId || req.query.org as string;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
     
     if (!organization_id) {
       return res.status(400).json({ error: 'organization_id required' });
     }
+    
+    console.log('[Sync Pull] Using organization:', organization_id, 'since:', since, 'offset:', offset);
     
     // Query for changes across all tables since sequence with pagination
     const result = await pool.query(`
