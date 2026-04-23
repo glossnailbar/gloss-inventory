@@ -97,10 +97,9 @@ router.post('/push', async (req, res) => {
             else if (fkCol === 'product_id') refTable = 'products';
             
             if (refTable) {
-              // For locations, lookup by name since client sends location name as location_id
-              const lookupColumn = fkCol === 'location_id' ? 'name' : 'local_id';
+              // Always lookup by local_id (UUID) since client sends UUIDs
               const fkResult = await client.query(
-                `SELECT id FROM ${refTable} WHERE ${lookupColumn} = $1 AND organization_id = $2`,
+                `SELECT id FROM ${refTable} WHERE local_id = $1 AND organization_id = $2`,
                 [filteredData[fkCol], organization_id]
               );
               if (fkResult.rows.length > 0) {
