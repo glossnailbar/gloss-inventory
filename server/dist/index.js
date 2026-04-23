@@ -30,6 +30,7 @@ async function runMigrations() {
     const dbUrl = process.env.DATABASE_URL ||
         'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway';
     console.log('Connecting to database for migrations...');
+    console.log('DB URL exists:', !!dbUrl);
     const pool = new pg_1.Pool({
         connectionString: dbUrl,
         ssl: { rejectUnauthorized: false }
