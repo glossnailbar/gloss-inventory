@@ -80,6 +80,10 @@ export function useSync(organizationId: string) {
       const pending = await getPendingQueue();
       console.log('[Sync] Pending changes:', pending.length);
 
+      // Get pending changes BEFORE push
+      const pending = await getPendingQueue();
+      console.log('[Sync] Pending changes:', pending.length);
+
       if (pending.length > 0) {
         // Push changes directly via API
         const deviceId = 'web-' + Math.random().toString(36).slice(2, 11);

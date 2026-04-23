@@ -612,6 +612,19 @@ export const App: React.FC = () => {
             }
             
             console.log(`Successfully imported ${importedCount} products`);
+            
+            // Log final state
+            const { queryByIndex } = await import('./db/database');
+            const pendingItems = await queryByIndex('sync_queue', 'by_status', 'pending');
+            console.log('[Import] Final sync queue state:', {
+              totalPending: pendingItems.length,
+              byTable: pendingItems.reduce((acc, item) => {
+                acc[item.table_name] = (acc[item.table_name] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>)
+            });
+            
+            // Reload to show imported data
             window.location.reload();
             
           } catch (err) {

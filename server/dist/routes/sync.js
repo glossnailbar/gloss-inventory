@@ -34,6 +34,20 @@ router.post('/push', async (req, res) => {
     const client = await pool_1.pool.connect();
     try {
         const { device_id, organization_id, changes } = pushRequestSchema.parse(req.body);
+        console.log('[Sync Push] Received', changes.length, 'changes from device', device_id);
+        console.log('[Sync Push] Changes by table:', changes.reduce((acc, c) => {
+            acc[c.table] = (acc[c.table] || 0) + 1;
+            return acc;
+        }, {}));
+        // Log inventory level changes specifically
+        const invChanges = changes.filter(c => c.table === 'inventory_levels');
+        if (invChanges.length > 0) {
+            console.log('[Sync Push] Inventory changes:', invChanges.map(c => ({
+                local_id: c.local_id,
+                operation: c.operation,
+                data: c.data
+            })));
+        }
         await client.query('BEGIN');
         const accepted = [];
         const conflicts = [];
@@ -87,11 +101,12 @@ router.post('/push', async (req, res) => {
                             // Always lookup by local_id (UUID) since client sends UUIDs
                             const fkResult = await client.query(`SELECT id FROM ${refTable} WHERE local_id = $1 AND organization_id = $2`, [filteredData[fkCol], organization_id]);
                             if (fkResult.rows.length > 0) {
+                                console.log(`[Sync Push] Resolved ${fkCol}: ${filteredData[fkCol]} -> ${fkResult.rows[0].id}`);
                                 filteredData[fkCol] = fkResult.rows[0].id;
                             }
                             else {
                                 // Foreign key not found - skip this change for now
-                                console.log(`Foreign key ${fkCol}=${filteredData[fkCol]} not found, deferring change`);
+                                console.log(`[Sync Push] Foreign key ${fkCol}=${filteredData[fkCol]} not found in ${refTable}, deferring change`);
                                 errors.push({
                                     local_id: change.local_id,
                                     error: `Referenced ${fkCol} not yet synced`,
