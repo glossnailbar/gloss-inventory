@@ -313,24 +313,34 @@ export async function resolveConflict(
  * Get current organization ID from sync state
  */
 async function getCurrentOrganizationId(): Promise<string> {
-  const db = await getDatabase();
+  try {
+    const db = await getDatabase();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('sync_state', 'readonly');
+      const store = transaction.objectStore('sync_state');
+      const request = store.get('current');
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction('sync_state', 'readonly');
-    const store = transaction.objectStore('sync_state');
-    const request = store.get('current');
-
-    request.onsuccess = () => {
-      const state = request.result;
-      if (state?.organization_id) {
-        resolve(state.organization_id);
-      } else {
-        // No org set yet - return empty string
-        resolve('');
-      }
-    };
-    request.onerror = () => reject(request.error);
-  });
+      request.onsuccess = () => {
+        const state = request.result;
+        if (state?.organization_id) {
+          resolve(state.organization_id);
+        } else {
+          // Fall back to localStorage
+          const localOrg = localStorage.getItem('organization_id') || '';
+          resolve(localOrg);
+        }
+      };
+      request.onerror = () => {
+        // Fall back to localStorage on error
+        const localOrg = localStorage.getItem('organization_id') || '';
+        resolve(localOrg);
+      };
+    });
+  } catch {
+    // Fall back to localStorage if database fails
+    return localStorage.getItem('organization_id') || '';
+  }
 }
 
 /**
