@@ -256,6 +256,7 @@ router.get('/pull', async (req, res) => {
       ORDER BY server_sequence, created_at, local_id
       LIMIT $3 OFFSET $4
     `, [organization_id, since, limit, offset]);
+        console.log('[Sync Pull] Query returned', result.rows.length, 'rows');
         const changes = result.rows.map(row => ({
             table: row.table_name,
             operation: row.deleted_at ? 'delete' : 'update',
