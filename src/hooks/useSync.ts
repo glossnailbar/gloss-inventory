@@ -63,9 +63,18 @@ export function useSync(organizationId: string) {
         throw new Error('No connection to server');
       }
 
-      // Verify auth token
+      // Verify auth token and log organization
       const token = getAuthToken();
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('[Sync] Token org:', payload.organizationId, 'role:', payload.role);
+        } catch (e) {
+          console.log('[Sync] Could not decode token');
+        }
+      }
       console.log('[Sync] Auth token present:', !!token);
+      console.log('[Sync] Using organizationId:', organizationId);
 
       // Get pending changes
       const pending = await getPendingQueue();

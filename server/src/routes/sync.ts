@@ -209,13 +209,16 @@ router.post('/push', async (req, res) => {
 });
 
 // GET /api/sync/pull?since={sequence}&org={org_id}
-router.get('/pull', async (req, res) => {
+router.get('/pull', async (req: any, res) => {
   try {
     const since = parseInt(req.query.since as string) || 0;
     const offset = parseInt(req.query.offset as string) || 0;
     // Use organization from auth token as source of truth
     const organization_id = req.user?.organizationId || req.query.org as string;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+    
+    console.log('[Sync Pull] Request from user:', req.user?.userId, 'org from token:', req.user?.organizationId);
+    console.log('[Sync Pull] Using organization:', organization_id, 'since:', since, 'offset:', offset);
     
     if (!organization_id) {
       return res.status(400).json({ error: 'organization_id required' });
