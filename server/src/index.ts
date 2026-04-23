@@ -25,13 +25,16 @@ dotenv.config();
 
 // Run database migrations
 async function runMigrations() {
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) {
-    console.log('No DATABASE_URL, skipping migrations');
-    return;
-  }
+  // Use same connection logic as pool.ts
+  const dbUrl = process.env.DATABASE_URL || 
+    'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway';
+  
+  console.log('Connecting to database for migrations...');
 
-  const pool = new Pool({ connectionString: dbUrl });
+  const pool = new Pool({ 
+    connectionString: dbUrl,
+    ssl: { rejectUnauthorized: false }
+  });
   
   try {
     console.log('Running database migrations...');

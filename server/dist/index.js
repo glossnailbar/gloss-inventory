@@ -26,12 +26,14 @@ const invitations_1 = __importDefault(require("./routes/invitations"));
 dotenv_1.default.config();
 // Run database migrations
 async function runMigrations() {
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
-        console.log('No DATABASE_URL, skipping migrations');
-        return;
-    }
-    const pool = new pg_1.Pool({ connectionString: dbUrl });
+    // Use same connection logic as pool.ts
+    const dbUrl = process.env.DATABASE_URL ||
+        'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway';
+    console.log('Connecting to database for migrations...');
+    const pool = new pg_1.Pool({
+        connectionString: dbUrl,
+        ssl: { rejectUnauthorized: false }
+    });
     try {
         console.log('Running database migrations...');
         const migrationFile = path_1.default.join(__dirname, '../migrations/000_init_schema.sql');

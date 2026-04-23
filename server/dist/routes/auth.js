@@ -110,11 +110,12 @@ router.post('/login', async (req, res) => {
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        // Get user's organizations
-        const orgsResult = await db.query(`SELECT om.organization_id, om.role, o.name
+        // Get user's organizations - prefer most recently joined
+        const orgsResult = await db.query(`SELECT om.organization_id, om.role, o.name, om.joined_at
        FROM organization_members om
        JOIN organizations o ON o.id = om.organization_id
-       WHERE om.user_id = $1 AND om.is_active = true`, [user.id]);
+       WHERE om.user_id = $1 AND om.is_active = true
+       ORDER BY om.joined_at DESC`, [user.id]);
         if (orgsResult.rows.length === 0) {
             return res.status(400).json({ error: 'No organization access' });
         }

@@ -175,10 +175,12 @@ router.post('/accept', async (req, res) => {
         }
         const invitation = inviteResult.rows[0];
         // Check if user already exists
-        const existingUser = await db.query('SELECT id FROM users WHERE email = $1', [invitation.email]);
+        const existingUser = await db.query('SELECT id, first_name, last_name, email FROM users WHERE email = $1', [invitation.email]);
         let userId;
+        let userData;
         if (existingUser.rows.length > 0) {
             userId = existingUser.rows[0].id;
+            userData = existingUser.rows[0];
         }
         else {
             // Create new user
@@ -186,8 +188,9 @@ router.post('/accept', async (req, res) => {
             const passwordHash = await bcrypt.hash(password, 10);
             const newUser = await db.query(`INSERT INTO users (email, password_hash, first_name, last_name)
          VALUES ($1, $2, $3, $4)
-         RETURNING id`, [invitation.email, passwordHash, firstName, lastName]);
+         RETURNING id, first_name, last_name, email`, [invitation.email, passwordHash, firstName, lastName]);
             userId = newUser.rows[0].id;
+            userData = newUser.rows[0];
         }
         // Add to organization
         await db.query(`INSERT INTO organization_members (user_id, organization_id, role, invited_at, joined_at, is_active)
@@ -198,7 +201,32 @@ router.post('/accept', async (req, res) => {
          joined_at = NOW()`, [userId, invitation.organization_id, invitation.role, invitation.created_at]);
         // Mark invitation as accepted
         await db.query('UPDATE invitations SET accepted_at = NOW() WHERE id = $1', [invitation.id]);
-        res.json({ message: 'Invitation accepted successfully' });
+        // Generate JWT for the invited organization
+        const jwt = await Promise.resolve().then(() => __importStar(require('jsonwebtoken')));
+        const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+        const authToken = jwt.default.sign({
+            userId: userId,
+            email: userData.email,
+            organizationId: invitation.organization_id,
+            role: invitation.role
+        }, JWT_SECRET, { expiresIn: '24h' });
+        // Get organization name
+        const orgResult = await db.query('SELECT name FROM organizations WHERE id = $1', [invitation.organization_id]);
+        res.json({
+            message: 'Invitation accepted successfully',
+            token: authToken,
+            user: {
+                id: userId,
+                email: userData.email,
+                firstName: userData.first_name,
+                lastName: userData.last_name,
+            },
+            organization: {
+                id: invitation.organization_id,
+                name: orgResult.rows[0]?.name || 'Organization',
+                role: invitation.role,
+            }
+        });
     }
     catch (error) {
         console.error('Accept invitation error:', error);
