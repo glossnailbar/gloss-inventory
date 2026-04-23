@@ -57,11 +57,18 @@ export async function pushChanges(
   organizationId: string,
   changes: any[]
 ): Promise<any> {
+  console.log('[API] pushChanges called with', changes.length, 'changes');
+  console.log('[API] Changes by table:', changes.reduce((acc, c) => {
+    acc[c.table] = (acc[c.table] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>));
+  
   const { data, error } = await fetchApi('/api/sync/push', {
     method: 'POST',
     body: JSON.stringify({ device_id: deviceId, organization_id: organizationId, changes }),
   });
   
+  console.log('[API] pushChanges result:', { data, error });
   if (error) throw new Error(error);
   return data;
 }
