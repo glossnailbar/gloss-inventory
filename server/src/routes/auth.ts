@@ -146,12 +146,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Get user's organizations
+    // Get user's organizations - prefer most recently joined
     const orgsResult = await db.query(
-      `SELECT om.organization_id, om.role, o.name
+      `SELECT om.organization_id, om.role, o.name, om.joined_at
        FROM organization_members om
        JOIN organizations o ON o.id = om.organization_id
-       WHERE om.user_id = $1 AND om.is_active = true`,
+       WHERE om.user_id = $1 AND om.is_active = true
+       ORDER BY om.joined_at DESC`,
       [user.id]
     );
 
