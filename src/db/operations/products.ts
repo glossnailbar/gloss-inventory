@@ -18,6 +18,7 @@ import {
   putToStore,
   deleteFromStore,
   generateLocalId,
+  getDatabase,
 } from '../database';
 import { queueCreate, queueUpdate, queueDelete } from '../sync-queue';
 
@@ -185,8 +186,13 @@ export async function getProductByBarcode(
 export async function getProductsByOrganization(
   organizationId: string
 ): Promise<Product[]> {
+  console.log('[DB] getProductsByOrganization called:', organizationId.substring(0,8));
   const all = await getAllFromStore<Product>(STORES.products);
-  return all.filter(p => p.organization_id === organizationId && !p.deleted_at);
+  console.log('[DB] Total products in store:', all.length);
+  console.log('[DB] First few products org IDs:', all.slice(0,3).map(p => p.organization_id?.substring(0,8)));
+  const filtered = all.filter(p => p.organization_id === organizationId && !p.deleted_at);
+  console.log('[DB] Filtered products:', filtered.length);
+  return filtered;
 }
 
 /**
@@ -394,22 +400,40 @@ export async function getProductInventoryLevels(
   productId: string
 ): Promise<InventoryLevel[]> {
   console.log('[DB] Getting inventory levels for product:', productId);
-  // Query all inventory levels and filter by product_id in memory
-  // Compound index query with IDBKeyRange.bound doesn't work reliably across browsers
-  const db = await getDatabase();
-  const transaction = db.transaction(STORES.inventory_levels, 'readonly');
-  const store = transaction.objectStore(STORES.inventory_levels);
-  const request = store.getAll();
-  
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => {
-      const allLevels = request.result as InventoryLevel[];
-      const filtered = allLevels.filter(level => level.product_id === productId);
-      console.log('[DB] Found inventory levels:', filtered.length, filtered);
-      resolve(filtered);
-    };
-    request.onerror = () => reject(request.error);
-  });
+  try {
+    console.log('[DB] Step 1: Getting database...');
+    const db = await getDatabase();
+    console.log('[DB] Step 2: Database obtained, creating transaction...');
+    const transaction = db.transaction(STORES.inventory_levels, 'readonly');
+    console.log('[DB] Step 3: Transaction created, getting store...');
+    const store = transaction.objectStore(STORES.inventory_levels);
+    console.log('[DB] Step 4: Store obtained, calling getAll...');
+    const request = store.getAll();
+    
+    console.log('[DB] Step 5: Awaiting getAll result...');
+    const allLevels = await new Promise<InventoryLevel[]>((resolve, reject) => {
+      request.onsuccess = () => {
+        console.log('[DB] Step 6: getAll success');
+        resolve(request.result as InventoryLevel[]);
+      };
+      request.onerror = () => {
+        console.error('[DB] Step 6: getAll ERROR:', request.error);
+        reject(request.error);
+      };
+    });
+    
+    console.log('[DB] Step 7: Total inventory levels in store:', allLevels.length);
+    if (allLevels.length > 0) {
+      console.log('[DB] First few inventory level product_ids:', allLevels.slice(0,3).map(l => l.product_id?.substring(0,8)));
+      console.log('[DB] Looking for product_id:', productId.substring(0,8));
+    }
+    const filtered = allLevels.filter(level => level.product_id === productId);
+    console.log('[DB] Found inventory levels for product:', filtered.length);
+    return filtered;
+  } catch (err) {
+    console.error('[DB] ERROR in getProductInventoryLevels:', err);
+    return [];
+  }
 }
 
 /**

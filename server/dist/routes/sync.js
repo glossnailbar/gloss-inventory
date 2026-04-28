@@ -121,11 +121,17 @@ router.post('/push', async (req, res) => {
                 if (change.operation === 'create') {
                     const columns = Object.keys(filteredData);
                     const values = Object.values(filteredData);
-                    // Build query dynamically
+                    // Build query dynamically - use UPSERT to prevent duplicates
                     const columnList = ['id', 'local_id', 'organization_id', ...columns, 'sync_version', 'created_at', 'updated_at'];
                     const paramList = ['gen_random_uuid()', '$1', '$2', ...values.map((_, i) => `$${i + 3}`), `$${values.length + 3}`];
+                    // Build the UPDATE SET clause for ON CONFLICT
+                    const updateSet = columns.map((col, i) => `${col} = $${i + 3}`).join(', ');
+                    const updateClause = columns.length > 0
+                        ? `SET ${updateSet}, sync_version = excluded.sync_version, updated_at = NOW()`
+                        : `SET sync_version = excluded.sync_version, updated_at = NOW()`;
                     const query = `INSERT INTO ${change.table} (${columnList.join(', ')})
              VALUES (${paramList.join(', ')}, NOW(), NOW())
+             ON CONFLICT (local_id, organization_id) DO UPDATE ${updateClause}
              RETURNING id`;
                     result = await client.query(query, [change.local_id, organization_id, ...values, change.client_version]);
                 }

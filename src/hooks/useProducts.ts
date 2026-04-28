@@ -29,8 +29,11 @@ export function useProducts(organizationId: string): UseProductsResult {
       setIsLoading(true);
       setError(null);
 
+      console.log('[useProducts] Loading products for org:', organizationId.substring(0,8));
+
       // Load from IndexedDB (works offline)
       const basicProducts = await getProductsByOrganization(organizationId);
+      console.log('[useProducts] Basic products loaded:', basicProducts.length);
 
       // Enrich with inventory data
       const withInventory = await Promise.all(
@@ -39,7 +42,11 @@ export function useProducts(organizationId: string): UseProductsResult {
         })
       );
 
-      setProducts(withInventory.filter((p): p is ProductWithInventory => !!p));
+      const filtered = withInventory.filter((p): p is ProductWithInventory => !!p);
+      console.log('[useProducts] Products with inventory:', filtered.length);
+      console.log('[useProducts] First product:', filtered[0]?.name, 'qty:', filtered[0]?.total_quantity);
+
+      setProducts(filtered);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to load products'));
     } finally {
