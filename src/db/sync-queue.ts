@@ -35,9 +35,13 @@ export async function queueCreate<T extends StoreRecord>(
   localId: string,
   data: Omit<T, 'id' | 'local_id' | 'sync_status' | 'sync_version' | 'created_at' | 'updated_at'>
 ): Promise<void> {
+  console.log('[SyncQueue] queueCreate called:', tableName, localId.substring(0,8));
+  
   const now = new Date().toISOString();
   const deviceId = getDeviceId();
   const organizationId = await getCurrentOrganizationId();
+
+  console.log('[SyncQueue] orgId:', organizationId.substring(0,8), 'device:', deviceId.substring(0,8));
 
   const queueItem: SyncQueueItem = {
     id: generateLocalId(),
@@ -55,6 +59,7 @@ export async function queueCreate<T extends StoreRecord>(
 
   await putToStore('sync_queue', queueItem);
   await updateSyncState({ pending_count: await getPendingCount() });
+  console.log('[SyncQueue] queueCreate done:', tableName, localId.substring(0,8), 'total pending:', await getPendingCount());
 }
 
 /**

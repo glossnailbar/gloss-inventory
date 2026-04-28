@@ -394,11 +394,22 @@ export async function getProductInventoryLevels(
   productId: string
 ): Promise<InventoryLevel[]> {
   console.log('[DB] Getting inventory levels for product:', productId);
-  // Use IDBKeyRange to query compound index by first key only
-  const range = IDBKeyRange.bound([productId, ''], [productId, '\uffff']);
-  const levels = await queryByIndex(STORES.inventory_levels, 'by_product_location', range);
-  console.log('[DB] Found inventory levels:', levels.length, levels);
-  return levels;
+  // Query all inventory levels and filter by product_id in memory
+  // Compound index query with IDBKeyRange.bound doesn't work reliably across browsers
+  const db = await getDatabase();
+  const transaction = db.transaction(STORES.inventory_levels, 'readonly');
+  const store = transaction.objectStore(STORES.inventory_levels);
+  const request = store.getAll();
+  
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => {
+      const allLevels = request.result as InventoryLevel[];
+      const filtered = allLevels.filter(level => level.product_id === productId);
+      console.log('[DB] Found inventory levels:', filtered.length, filtered);
+      resolve(filtered);
+    };
+    request.onerror = () => reject(request.error);
+  });
 }
 
 /**

@@ -51,7 +51,13 @@ export function useSync(organizationId: string) {
 
   // Trigger sync
   const sync = useCallback(async () => {
-    if (status.isSyncing) return;
+    console.log('🔄🔄🔄 SYNC FUNCTION CALLED 🔄🔄🔄');
+    console.log('🔄 isSyncing:', status.isSyncing);
+    
+    if (status.isSyncing) {
+      console.log('🔄 SYNC SKIPPED - already syncing');
+      return;
+    }
 
     console.log('[Sync] Starting sync for organization:', organizationId);
     setStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
@@ -76,13 +82,11 @@ export function useSync(organizationId: string) {
       console.log('[Sync] Auth token present:', !!token);
       console.log('[Sync] Using organizationId:', organizationId);
 
-      // Get pending changes
-      const pending = await getPendingQueue();
-      console.log('[Sync] Pending changes:', pending.length);
-
       // Get pending changes BEFORE push
+      console.log('[Sync] About to get pending queue...');
       const pending = await getPendingQueue();
       console.log('[Sync] Pending changes:', pending.length);
+      console.log('[Sync] Pending changes breakdown:', pending.reduce((acc, p) => { acc[p.table_name] = (acc[p.table_name]||0)+1; return acc; }, {} as Record<string, number>));
 
       if (pending.length > 0) {
         // Push changes directly via API

@@ -634,6 +634,15 @@ export const App: React.FC = () => {
               }, {} as Record<string, number>)
             });
             
+            // SYNC BEFORE RELOADING!
+            console.log('[Import] Triggering sync before reload...');
+            if (sync) {
+              await sync();
+              console.log('[Import] Sync completed');
+            } else {
+              console.log('[Import] No sync function available');
+            }
+            
             // Reload to show imported data
             window.location.reload();
             
