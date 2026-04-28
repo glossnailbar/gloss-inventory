@@ -530,7 +530,9 @@ export const App: React.FC = () => {
             
             for (const locationName of locations) {
               try {
-                const locationId = 'loc-' + Math.random().toString(36).slice(2, 11);
+                // Use a proper UUID instead of 'loc-xxx' prefix
+                const { generateLocalId } = await import('./db/database');
+                const locationId = generateLocalId();
                 console.log('[Import] Creating location:', locationName, '->', locationId);
                 await putToStore(STORES.locations, {
                   id: locationId,
