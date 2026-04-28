@@ -545,8 +545,16 @@ export const App: React.FC = () => {
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                 });
+                
+                // Queue location for sync
+                const { queueCreate } = await import('./db/sync-queue');
+                await queueCreate(STORES.locations, locationId, {
+                  name: locationName,
+                  is_active: true,
+                });
+                
                 locationMap.set(locationName, locationId);
-                console.log('[Import] Location created:', locationName);
+                console.log('[Import] Location created and queued:', locationName);
               } catch (err) {
                 console.error('Failed to create location:', locationName, err);
               }
