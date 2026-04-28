@@ -8,7 +8,7 @@
  * - Category chips for filtering
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ProductCard } from './ProductCard';
 import { SimpleHeader } from './SimpleHeader';
 import { CategoryFilter } from './CategoryFilter';
@@ -38,6 +38,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { products, isLoading, refresh } = useProducts(organizationId);
+
+  // Refresh products when sync completes
+  useEffect(() => {
+    const handleSyncCompleted = () => {
+      console.log('[ProductCatalog] Sync completed, refreshing products...');
+      refresh();
+    };
+    
+    window.addEventListener('sync-completed', handleSyncCompleted);
+    return () => window.removeEventListener('sync-completed', handleSyncCompleted);
+  }, [refresh]);
 
   // Filter products based on search, category, and location
   const filteredProducts = useMemo(() => {

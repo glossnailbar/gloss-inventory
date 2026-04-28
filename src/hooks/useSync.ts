@@ -196,6 +196,9 @@ export function useSync(organizationId: string) {
         pendingCount: 0,
       }));
       
+      // Notify other components that sync completed
+      window.dispatchEvent(new CustomEvent('sync-completed'));
+      
       console.log('[Sync] Complete!');
     } catch (err) {
       console.error('[Sync] Error:', err);
