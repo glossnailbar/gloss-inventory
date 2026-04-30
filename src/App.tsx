@@ -518,14 +518,33 @@ export const App: React.FC = () => {
               }
             }
             
-            // Create locations
-            const { putToStore, STORES } = await import('./db/database');
-            const locationMap = new Map<string, string>();
+            // Create a default location for products without specific locations
+            let defaultLocationId: string;
+            if (locations.length === 0) {
+              const { generateLocalId } = await import('./db/database');
+              defaultLocationId = generateLocalId();
+              await putToStore(STORES.locations, {
+                id: defaultLocationId,
+                local_id: defaultLocationId,
+                organization_id: organizationId,
+                name: 'Default',
+                is_active: true,
+                sync_status: 'pending',
+                sync_version: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+              await queueCreate(STORES.locations, defaultLocationId, {
+                name: 'Default',
+                is_active: true,
+              });
+              console.log('[Import] Created default location:', defaultLocationId);
+            }
             
             console.log('[Import] Creating', locations.length, 'locations:', locations);
             
             if (locations.length === 0) {
-              console.warn('[Import] No locations to create!');
+              console.warn('[Import] No locations to create! Using default.');
             }
             
             for (const locationName of locations) {
@@ -580,7 +599,7 @@ export const App: React.FC = () => {
                 const vendorId = product.vendor ? vendorMap.get(product.vendor) : undefined;
                 
                 // Use Sortly location or default
-                const locationId = product.location ? locationMap.get(product.location) || 'default' : 'default';
+                const locationId = product.location ? locationMap.get(product.location) || defaultLocationId : defaultLocationId;
                 
                 console.log('Creating product:', product.name, 'qty:', product.quantity, 'location:', locationId);
                 

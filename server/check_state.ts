@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+import { Pool } from 'pg';
 
 const pool = new Pool({
   connectionString: 'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway',
