@@ -36,6 +36,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     is_professional_only: false,
     has_variants: false,
     image_url: '',
+    quantity: 0,
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,11 +47,17 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     
     setIsSubmitting(true);
     try {
-      await createProduct({
-        ...formData,
-        organization_id: organizationId,
-        category_id: formData.category_id,
-      });
+      // Create the product with quantity
+      await createProduct(
+        {
+          ...formData,
+          organization_id: organizationId,
+          category_id: formData.category_id,
+        },
+        formData.quantity > 0
+          ? [{ location_id: 'default', quantity: formData.quantity }]
+          : undefined
+      );
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -277,6 +284,18 @@ const Step2Content: React.FC<{
           <span className="flex-1">Professional use only</span>
         </label>
       </div>
+    </div>
+    
+    {/* Initial Quantity */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Initial Quantity</label>
+      <input
+        type="number"
+        value={formData.quantity}
+        onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+        placeholder="0"
+        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-rose-500 outline-none"
+      />
     </div>
   </div>
 );

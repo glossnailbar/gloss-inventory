@@ -1,0 +1,49 @@
+// Test script to verify duplicate prevention
+
+const testData = {
+  device_id: 'test-device',
+  organization_id: 'cbe1d396-65f1-41ec-9c51-a471cfa836a1',
+  changes: [
+    {
+      local_id: 'test-product-123',
+      table: 'products',
+      operation: 'create',
+      data: {
+        name: 'Test Product',
+        sku: 'TEST-001'
+      },
+      client_timestamp: new Date().toISOString(),
+      client_version: 1
+    }
+  ]
+};
+
+// Get auth token from localStorage
+const token = localStorage.getItem('auth_token');
+
+fetch('https://gloss-inventory.up.railway.app/api/sync/push', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(testData)
+})
+.then(res => res.json())
+.then(data => {
+  console.log('First push:', data);
+  // Push same data again
+  return fetch('https://gloss-inventory.up.railway.app/api/sync/push', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(testData)
+  });
+})
+.then(res => res.json())
+.then(data => {
+  console.log('Second push (should update not duplicate):', data);
+})
+.catch(err => console.error('Error:', err));
