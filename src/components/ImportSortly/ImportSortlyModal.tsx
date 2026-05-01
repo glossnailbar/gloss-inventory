@@ -212,8 +212,13 @@ export const ImportSortlyModal: React.FC<ImportSortlyModalProps> = ({
       // Parse purchase link
       const purchaseLink = row['Purchase Link'];
       
+      // Create deterministic ID based on product name + SKU + barcode
+      const idString = `${row['Entry Name'] || ''}|${row['SID'] || ''}|${row['Barcode/QR1-Data'] || ''}`;
+      const hash = idString.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0);
+      const deterministicId = `sortly-${Math.abs(hash).toString(36)}`;
+      
       return {
-        local_id: `sortly-${Date.now()}-${index}`,
+        local_id: deterministicId,
         name: row['Entry Name'] || `Item ${index + 1}`,
         item_group: row['Item Group Name'] || null,
         sku: row['SID'] || null,
