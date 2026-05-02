@@ -6,10 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.pool = void 0;
 const pg_1 = require("pg");
 // Use DATABASE_PUBLIC_URL which has sslmode=no-verify
-// Let pg handle the sslmode parameter from the connection string
-const connectionString = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL || '';
+// Add uselibpqcompat=true for pg v8 compatibility with Railway proxy
+const connectionString = (process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL || '')
+    .replace('?sslmode=no-verify', '?uselibpqcompat=true&sslmode=no-verify');
 console.log('[Pool] Connecting to DB...');
-// Let pg parse the connection string and handle sslmode
+// Let pg parse the connection string
 const pool = new pg_1.Pool({
     connectionString,
     max: 5,
