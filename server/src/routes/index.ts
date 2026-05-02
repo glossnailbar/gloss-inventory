@@ -27,12 +27,18 @@ router.get('/diagnostic', async (req, res) => {
   try {
     const organization_id = req.query.org as string || 'cbe1d396-65f1-41ec-9c51-a471cfa836a1';
     
+    console.log('[Diagnostic] Request for org:', organization_id);
+    
     const client = await pool.connect();
     
     try {
+      console.log('[Diagnostic] Connected to DB');
       const products = await client.query('SELECT COUNT(*) as count FROM products WHERE organization_id = $1 AND deleted_at IS NULL', [organization_id]);
+      console.log('[Diagnostic] Products query done');
       const locations = await client.query('SELECT COUNT(*) as count FROM locations WHERE organization_id = $1 AND deleted_at IS NULL', [organization_id]);
+      console.log('[Diagnostic] Locations query done');
       const inventory = await client.query('SELECT COUNT(*) as count FROM inventory_levels WHERE organization_id = $1 AND deleted_at IS NULL', [organization_id]);
+      console.log('[Diagnostic] Inventory query done');
       
       const sample = await client.query(
         `SELECT il.local_id, il.quantity_on_hand, p.local_id as product_local_id, p.name as product_name
@@ -42,6 +48,7 @@ router.get('/diagnostic', async (req, res) => {
          LIMIT 10`,
         [organization_id]
       );
+      console.log('[Diagnostic] Sample query done, rows:', sample.rows.length);
       
       res.json({
         organization_id,
@@ -53,9 +60,9 @@ router.get('/diagnostic', async (req, res) => {
     } finally {
       client.release();
     }
-  } catch (err) {
-    console.error('Diagnostic failed:', err);
-    res.status(500).json({ error: 'Diagnostic failed' });
+  } catch (err: any) {
+    console.error('[Diagnostic] Error:', err.message);
+    res.status(500).json({ error: 'Diagnostic failed', details: err.message });
   }
 });
 
