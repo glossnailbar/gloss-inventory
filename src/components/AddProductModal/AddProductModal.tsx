@@ -43,16 +43,16 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   const handleSubmit = useCallback(async () => {
-    if (!formData.name || !formData.category_id) return;
+    if (!formData.name) return;
     
     setIsSubmitting(true);
     try {
-      // Create the product with quantity
+      // Create the product with quantity (category is now optional)
       await createProduct(
         {
           ...formData,
           organization_id: organizationId,
-          category_id: formData.category_id,
+          category_id: formData.category_id || null,
         },
         formData.quantity > 0
           ? [{ location_id: 'default', quantity: formData.quantity }]
