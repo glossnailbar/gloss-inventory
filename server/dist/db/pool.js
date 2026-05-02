@@ -5,12 +5,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pool = void 0;
 const pg_1 = require("pg");
-// Railway provides DATABASE_URL with SSL configuration baked in
-// Just use it directly without additional SSL config
+// Get connection string from Railway environment
 const connectionString = process.env.DATABASE_URL ||
     process.env.DATABASE_PUBLIC_URL ||
-    'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway';
-// Don't add extra SSL config - let the URL handle it
+    'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@glossinventorydb.up.railway.app:5432/railway';
+// Log the host we're connecting to (for debugging)
+const hostMatch = connectionString.match(/@([^:]+):/);
+const dbHost = hostMatch ? hostMatch[1] : 'unknown';
+console.log('[Pool] Connecting to DB host:', dbHost);
 const pool = new pg_1.Pool({
     connectionString,
     max: 5,
