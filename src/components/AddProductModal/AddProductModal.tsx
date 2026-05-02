@@ -5,6 +5,7 @@
 import React, { useState, useCallback } from 'react';
 import { createProduct } from '../../db/operations/products';
 import { useCategories } from '../../hooks/useCategories';
+import { useLocations } from '../../hooks/useLocations';
 
 export interface AddProductModalProps {
   organizationId: string;
@@ -20,6 +21,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   initialBarcode,
 }) => {
   const { categories } = useCategories(organizationId);
+  const { locations } = useLocations(organizationId);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -44,6 +46,33 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     
     setIsSubmitting(true);
     try {
+      // Find or create default location
+      let defaultLocationId = locations[0]?.local_id;
+      if (!defaultLocationId) {
+        // Create a default location if none exists
+        const { generateLocalId } = await import('../../db/database');
+        defaultLocationId = generateLocalId();
+        const { queueCreate } = await import('../../db/sync-queue');
+        const { putToStore } = await import('../../db/database');
+        const { STORES } = await import('../../db/schema');
+        
+        await putToStore(STORES.locations, {
+          id: defaultLocationId,
+          local_id: defaultLocationId,
+          organization_id: organizationId,
+          name: 'Default',
+          is_active: true,
+          sync_status: 'pending',
+          sync_version: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        await queueCreate(STORES.locations, defaultLocationId, {
+          name: 'Default',
+          is_active: true,
+        });
+      }
+      
       await createProduct(
         {
           ...formData,
@@ -51,7 +80,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           category_id: formData.category_id || null,
         },
         formData.quantity > 0
-          ? [{ location_id: 'default', quantity: formData.quantity }]
+          ? [{ location_id: defaultLocationId, quantity: formData.quantity }]
           : undefined
       );
       onSuccess?.();
@@ -61,7 +90,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, organizationId, onClose, onSuccess]);
+  }, [formData, organizationId, locations, onClose, onSuccess]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
