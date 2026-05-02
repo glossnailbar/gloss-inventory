@@ -419,4 +419,46 @@ router.post('/setup-inventory', async (req, res) => {
   }
 });
 
+// GET /api/sync/diagnostic - Show server state for debugging
+router.get('/diagnostic', async (req: any, res) => {
+  try {
+    const organization_id = req.user?.organizationId || req.query.org as string;
+    
+    if (!organization_id) {
+      return res.status(400).json({ error: 'organization_id required' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+      const products = await client.query('SELECT COUNT(*) as count FROM products WHERE organization_id = $1 AND deleted_at IS NULL', [organization_id]);
+      const locations = await client.query('SELECT COUNT(*) as count FROM locations WHERE organization_id = $1 AND deleted_at IS NULL', [organization_id]);
+      const inventory = await client.query('SELECT COUNT(*) as count FROM inventory_levels WHERE organization_id = $1 AND deleted_at IS NULL', [organization_id]);
+      
+      // Get sample inventory_levels
+      const sample = await client.query(
+        `SELECT il.local_id, il.quantity_on_hand, p.local_id as product_local_id, p.name as product_name
+         FROM inventory_levels il
+         JOIN products p ON p.id = il.product_id
+         WHERE il.organization_id = $1 AND il.deleted_at IS NULL
+         LIMIT 5`,
+        [organization_id]
+      );
+      
+      res.json({
+        organization_id,
+        products: parseInt(products.rows[0].count),
+        locations: parseInt(locations.rows[0].count),
+        inventory_levels: parseInt(inventory.rows[0].count),
+        sample_inventory_levels: sample.rows,
+      });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Diagnostic failed:', err);
+    res.status(500).json({ error: 'Diagnostic failed', details: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 export { router as syncRouter };
