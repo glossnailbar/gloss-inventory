@@ -1,21 +1,25 @@
 /**
  * PostgreSQL Connection Pool
+ * 
+ * Railway connection notes:
+ * - Railway provides DATABASE_URL with TCP proxy
+ * - For Node.js pg library, use ssl: { rejectUnauthorized: false }
+ * - Don't add query params to URL, configure SSL separately
  */
 
 import { Pool } from 'pg';
 
-// Get connection string from Railway environment
-const connectionString = process.env.DATABASE_URL || 
-  process.env.DATABASE_PUBLIC_URL ||
-  'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@glossinventorydb.up.railway.app:5432/railway';
+// Get connection string from Railway environment (strip query params)
+const rawUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+const connectionString = rawUrl ? rawUrl.split('?')[0] : 'postgresql://postgres:pFMGWLFXNvypKigaCWtAZEeWxHHwgLTg@monorail.proxy.rlwy.net:35829/railway';
 
-// Log the host we're connecting to (for debugging)
-const hostMatch = connectionString.match(/@([^:]+):/);
-const dbHost = hostMatch ? hostMatch[1] : 'unknown';
-console.log('[Pool] Connecting to DB host:', dbHost);
+console.log('[Pool] Connecting to DB...');
 
 const pool = new Pool({
   connectionString,
+  ssl: {
+    rejectUnauthorized: false,
+  },
   max: 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 15000,
